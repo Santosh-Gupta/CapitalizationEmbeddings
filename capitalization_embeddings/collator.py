@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import torch
-from transformers import PreTrainedTokenizerBase
+from transformers import DataCollatorForTokenClassification, PreTrainedTokenizerBase
 
 
 @dataclass
@@ -25,13 +25,23 @@ class DataCollatorForCapitalizedLanguageModeling:
     def __post_init__(self) -> None:
         if self.tokenizer.mask_token is None:
             raise ValueError("This collator requires a tokenizer with a mask token.")
+        if self.return_tensors != "pt":
+            raise ValueError("This collator currently supports return_tensors='pt' only.")
 
     def __call__(self, features: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+        features = [dict(feature) for feature in features]
+        capitalization_ids = [feature.pop("capitalization_ids") for feature in features]
         batch = self.tokenizer.pad(
             features,
             padding=True,
             pad_to_multiple_of=self.pad_to_multiple_of,
             return_tensors=self.return_tensors,
+        )
+        batch["capitalization_ids"] = _pad_sequences_like_input_ids(
+            capitalization_ids,
+            batch["input_ids"],
+            padding_side=self.tokenizer.padding_side,
+            pad_value=0,
         )
 
         special_tokens_mask = batch.pop("special_tokens_mask", None)
@@ -96,3 +106,67 @@ class DataCollatorForCapitalizedLanguageModeling:
         inputs[indices_random] = random_words[indices_random]
 
         return inputs, labels
+
+
+@dataclass
+class DataCollatorForCapitalizedTokenClassification:
+    """Token-classification collator that pads capitalization IDs."""
+
+    tokenizer: PreTrainedTokenizerBase
+    padding: bool | str = True
+    max_length: int | None = None
+    pad_to_multiple_of: int | None = None
+    label_pad_token_id: int = -100
+    return_tensors: str = "pt"
+
+    def __post_init__(self) -> None:
+        if self.return_tensors != "pt":
+            raise ValueError("This collator currently supports return_tensors='pt' only.")
+        self.base_collator = DataCollatorForTokenClassification(
+            tokenizer=self.tokenizer,
+            padding=self.padding,
+            max_length=self.max_length,
+            pad_to_multiple_of=self.pad_to_multiple_of,
+            label_pad_token_id=self.label_pad_token_id,
+            return_tensors=self.return_tensors,
+        )
+
+    def __call__(self, features: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+        features = [dict(feature) for feature in features]
+        capitalization_ids = [feature.pop("capitalization_ids") for feature in features]
+        batch = self.base_collator(features)
+        batch["capitalization_ids"] = _pad_sequences_like_input_ids(
+            capitalization_ids,
+            batch["input_ids"],
+            padding_side=self.tokenizer.padding_side,
+            pad_value=0,
+        )
+        return batch
+
+
+def _pad_sequences_like_input_ids(
+    sequences: list[list[int]],
+    input_ids: torch.Tensor,
+    *,
+    padding_side: str,
+    pad_value: int,
+) -> torch.Tensor:
+    """Pad custom per-token fields to the same shape as padded input IDs."""
+
+    target_length = input_ids.shape[1]
+    padded_sequences = []
+
+    for sequence in sequences:
+        difference = target_length - len(sequence)
+        if difference < 0:
+            raise ValueError(
+                "Custom token feature is longer than input_ids after tokenizer padding.",
+            )
+
+        padding = [pad_value] * difference
+        if padding_side == "left":
+            padded_sequences.append(padding + list(sequence))
+        else:
+            padded_sequences.append(list(sequence) + padding)
+
+    return torch.tensor(padded_sequences, dtype=torch.long, device=input_ids.device)

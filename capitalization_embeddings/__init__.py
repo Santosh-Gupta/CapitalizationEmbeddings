@@ -1,6 +1,9 @@
 """Capitalization embedding experiments built on Hugging Face Transformers."""
 
-from .collator import DataCollatorForCapitalizedLanguageModeling
+from .collator import (
+    DataCollatorForCapitalizedLanguageModeling,
+    DataCollatorForCapitalizedTokenClassification,
+)
 from .modeling import (
     CapitalizedBertConfig,
     CapitalizedBertForMaskedLM,
@@ -26,6 +29,7 @@ __all__ = [
     "CapitalizedBertForTokenClassification",
     "CapitalizedBertModel",
     "DataCollatorForCapitalizedLanguageModeling",
+    "DataCollatorForCapitalizedTokenClassification",
     "capitalization_ids_from_offsets",
     "capitalization_ids_from_words",
     "classify_capitalization",
