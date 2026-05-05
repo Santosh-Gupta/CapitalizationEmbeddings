@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Local and Colab training artifacts
+checkpoints/
+outputs/
+runs/
+wandb/
+mlruns/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Environment files
+.env
+.venv/
+venv/
