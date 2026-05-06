@@ -41,6 +41,7 @@ capitalization_embeddings/
   collator.py       # MLM collator with token labels and capitalization labels
 notebooks/
   00_tokenization_and_model_smoke_test.ipynb
+  00b_optional_model_smoke_test.ipynb
   01_continue_pretraining_mlm.ipynb
   02_finetune_conll2003_ner.ipynb
   03_finetune_conll2003_baselines.ipynb
@@ -59,9 +60,13 @@ Clone or upload this repo to Colab, then run from the repo root:
 Recommended order:
 
 1. `notebooks/00_tokenization_and_model_smoke_test.ipynb`
-2. `notebooks/01_continue_pretraining_mlm.ipynb`
-3. `notebooks/02_finetune_conll2003_ner.ipynb`
-4. `notebooks/03_finetune_conll2003_baselines.ipynb`
+2. `notebooks/00b_optional_model_smoke_test.ipynb`
+3. `notebooks/01_continue_pretraining_mlm.ipynb`
+4. `notebooks/02_finetune_conll2003_ner.ipynb`
+5. `notebooks/03_finetune_conll2003_baselines.ipynb`
+
+Notebook `00` is tokenizer-only and does not load BERT weights. Notebook `00b`
+is optional and only exists to verify the custom model forward pass.
 
 The notebooks default to saving checkpoints under:
 
