@@ -15,29 +15,21 @@ class NotebookStaticTests(unittest.TestCase):
             if cell["cell_type"] == "code"
         )
 
-    def test_training_arguments_use_pinned_transformers_api(self):
-        for path in NOTEBOOK_DIR.glob("*.ipynb"):
-            text = path.read_text(encoding="utf-8")
-            self.assertNotIn(
-                "evaluation_strategy",
-                text,
-                f"{path.name} should use eval_strategy for transformers 4.56.2.",
-            )
-
-    def test_trainer_uses_processing_class_not_tokenizer(self):
-        for path in NOTEBOOK_DIR.glob("*.ipynb"):
-            notebook = json.loads(path.read_text(encoding="utf-8"))
-            for cell in notebook["cells"]:
-                if cell["cell_type"] != "code":
-                    continue
-
-                source = "".join(cell.get("source", []))
-                if "Trainer(" not in source:
-                    continue
-
-                trainer_block = source[source.index("Trainer(") :]
-                self.assertIn("processing_class=tokenizer", trainer_block, path.name)
-                self.assertNotIn("    tokenizer=tokenizer,", trainer_block, path.name)
+    def test_training_notebooks_use_hf_compat_helpers(self):
+        training_notebooks = [
+            "01_continue_pretraining_mlm.ipynb",
+            "02_finetune_conll2003_ner.ipynb",
+            "03_finetune_conll2003_baselines.ipynb",
+        ]
+        for notebook_name in training_notebooks:
+            source = self.notebook_source(notebook_name)
+            self.assertIn("make_training_arguments", source, notebook_name)
+            self.assertIn("make_trainer", source, notebook_name)
+            self.assertNotIn("TrainingArguments(", source, notebook_name)
+            self.assertNotIn("Trainer(", source, notebook_name)
+            self.assertNotIn("evaluation_strategy", source, notebook_name)
+            self.assertIn("eval_strategy", source, notebook_name)
+            self.assertIn("processing_class=tokenizer", source, notebook_name)
 
     def test_notebooks_auto_cd_to_drive_repo_when_available(self):
         expected = "/content/drive/MyDrive/Github/CapitalizationEmbeddings"
