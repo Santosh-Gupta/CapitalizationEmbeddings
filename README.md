@@ -57,6 +57,9 @@ Clone or upload this repo to Colab, then run from the repo root:
 %pip install -q -e . -r requirements-colab.txt
 ```
 
+If Colab changes installed packages, restart the runtime before continuing so
+the notebook imports the pinned versions from `requirements-colab.txt`.
+
 Recommended order:
 
 1. `notebooks/00_tokenization_and_model_smoke_test.ipynb`

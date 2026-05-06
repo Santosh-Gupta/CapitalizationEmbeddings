@@ -96,14 +96,16 @@ class CapitalizedBertEmbeddings(nn.Module):
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
         if position_ids is None:
-            position_ids = self.position_ids[
-                :,
-                past_key_values_length : seq_length + past_key_values_length,
-            ]
+            position_ids = torch.arange(
+                past_key_values_length,
+                seq_length + past_key_values_length,
+                dtype=torch.long,
+                device=device,
+            )
+            position_ids = position_ids.unsqueeze(0).expand(input_shape)
 
         if token_type_ids is None:
-            buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-            token_type_ids = buffered_token_type_ids.expand(input_shape[0], seq_length)
+            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
         if capitalization_ids is None:
             capitalization_ids = torch.zeros(
@@ -278,11 +280,7 @@ class CapitalizedBertModel(BertPreTrainedModel):
             )
 
         if token_type_ids is None:
-            if hasattr(self.embeddings, "token_type_ids"):
-                buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                token_type_ids = buffered_token_type_ids.expand(batch_size, seq_length)
-            else:
-                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
         extended_attention_mask = self.get_extended_attention_mask(
             attention_mask,

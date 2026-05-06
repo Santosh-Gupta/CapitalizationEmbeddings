@@ -48,6 +48,33 @@ class ModelingTests(unittest.TestCase):
 
         self.assertEqual(tuple(expanded.shape), (1, 1, 2, 1, 1))
 
+    def test_forward_does_not_depend_on_position_or_token_type_buffers(self):
+        model = CapitalizedBertModel(tiny_config(), add_pooling_layer=False)
+        model.embeddings.position_ids.fill_(999_999)
+        model.embeddings.token_type_ids.fill_(999_999)
+
+        input_ids = torch.tensor([[2, 10, 11, 12, 3]])
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=torch.ones_like(input_ids),
+            capitalization_ids=torch.zeros_like(input_ids),
+        )
+
+        self.assertEqual(tuple(outputs.last_hidden_state.shape), (1, 5, 16))
+
+    def test_explicit_bad_position_ids_raise_clear_error(self):
+        model = CapitalizedBertModel(tiny_config(), add_pooling_layer=False)
+        input_ids = torch.tensor([[2, 10, 11, 12, 3]])
+        position_ids = torch.tensor([[0, 1, 2, 3, 999_999]])
+
+        with self.assertRaisesRegex(ValueError, "position_ids contains indices"):
+            model(
+                input_ids=input_ids,
+                attention_mask=torch.ones_like(input_ids),
+                capitalization_ids=torch.zeros_like(input_ids),
+                position_ids=position_ids,
+            )
+
     def test_masked_lm_forward_accepts_capitalization_ids(self):
         model = CapitalizedBertForMaskedLM(tiny_config())
         input_ids = torch.tensor([[2, 10, 11, 12, 3]])

@@ -3,4 +3,4 @@ datasets>=2.19.0
 evaluate>=0.4.0
 seqeval>=1.2.2
 torch>=2.2.0
-transformers>=4.40.0
+transformers==4.56.2
