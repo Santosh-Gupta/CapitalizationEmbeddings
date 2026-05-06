@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import torch
 from transformers import BertTokenizerFast
@@ -59,6 +60,29 @@ class CollatorTests(unittest.TestCase):
         self.assertEqual(tuple(batch["capitalization_ids"].shape), (2, 4))
         self.assertEqual(tuple(batch["capitalization_labels"].shape), (2, 4))
         self.assertEqual(batch["capitalization_ids"][1, -1].item(), 0)
+
+    def test_mlm_random_replacements_use_base_vocab_size(self):
+        tokenizer = tiny_tokenizer()
+        tokenizer.add_tokens(["extra_added_token"])
+        collator = DataCollatorForCapitalizedLanguageModeling(
+            tokenizer=tokenizer,
+            mlm_probability=1.0,
+        )
+        features = [
+            {
+                "input_ids": [2, 5, 6, 3],
+                "attention_mask": [1, 1, 1, 1],
+                "special_tokens_mask": [1, 0, 0, 1],
+                "capitalization_ids": [0, 1, 0, 0],
+            },
+        ]
+
+        with patch("torch.randint", return_value=torch.zeros((1, 4), dtype=torch.long)) as randint:
+            torch.manual_seed(0)
+            collator(features)
+
+        self.assertEqual(randint.call_args.args[0], tokenizer.vocab_size)
+        self.assertGreater(len(tokenizer), tokenizer.vocab_size)
 
     def test_token_classification_collator_pads_capitalization_ids(self):
         tokenizer = tiny_tokenizer()

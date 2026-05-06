@@ -98,7 +98,7 @@ class DataCollatorForCapitalizedLanguageModeling:
             & ~indices_replaced
         )
         random_words = torch.randint(
-            len(self.tokenizer),
+            self.tokenizer.vocab_size,
             labels.shape,
             dtype=torch.long,
             device=inputs.device,

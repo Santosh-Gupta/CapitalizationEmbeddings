@@ -113,18 +113,55 @@ class CapitalizedBertEmbeddings(nn.Module):
             )
 
         if inputs_embeds is None:
+            _validate_embedding_indices(
+                "input_ids",
+                input_ids,
+                self.word_embeddings.num_embeddings,
+            )
             inputs_embeds = self.word_embeddings(input_ids)
 
+        _validate_embedding_indices(
+            "token_type_ids",
+            token_type_ids,
+            self.token_type_embeddings.num_embeddings,
+        )
+        _validate_embedding_indices(
+            "capitalization_ids",
+            capitalization_ids,
+            self.capitalization_embeddings.num_embeddings,
+        )
         embeddings = inputs_embeds
         embeddings = embeddings + self.token_type_embeddings(token_type_ids)
         embeddings = embeddings + self.capitalization_embeddings(capitalization_ids)
 
         if self.position_embedding_type == "absolute":
+            _validate_embedding_indices(
+                "position_ids",
+                position_ids,
+                self.position_embeddings.num_embeddings,
+            )
             embeddings = embeddings + self.position_embeddings(position_ids)
 
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
+
+
+def _validate_embedding_indices(
+    name: str,
+    values: torch.Tensor | None,
+    num_embeddings: int,
+) -> None:
+    if values is None or values.numel() == 0:
+        return
+
+    minimum = int(values.min().item())
+    maximum = int(values.max().item())
+    if minimum < 0 or maximum >= num_embeddings:
+        raise ValueError(
+            f"{name} contains indices outside embedding range: "
+            f"min={minimum}, max={maximum}, allowed=[0, {num_embeddings - 1}]."
+        )
 
 
 class CapitalizedBertModel(BertPreTrainedModel):
