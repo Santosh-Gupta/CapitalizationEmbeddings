@@ -153,6 +153,38 @@ class CapitalizedBertModel(BertPreTrainedModel):
     def set_input_embeddings(self, value: nn.Module) -> None:
         self.embeddings.word_embeddings = value
 
+    def get_head_mask(
+        self,
+        head_mask: torch.Tensor | None,
+        num_hidden_layers: int,
+        is_attention_chunked: bool = False,
+    ) -> torch.Tensor | list[None]:
+        """Prepare attention head masks across Transformers versions."""
+
+        if head_mask is None:
+            return [None] * num_hidden_layers
+
+        head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
+        if is_attention_chunked:
+            head_mask = head_mask.unsqueeze(-1)
+        return head_mask
+
+    def _convert_head_mask_to_5d(
+        self,
+        head_mask: torch.Tensor,
+        num_hidden_layers: int,
+    ) -> torch.Tensor:
+        if head_mask.dim() == 1:
+            head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+        elif head_mask.dim() == 2:
+            head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
+
+        if head_mask.dim() != 5:
+            raise ValueError(f"head_mask.dim must be 5, got {head_mask.dim()}.")
+
+        return head_mask.to(dtype=self.dtype)
+
     def forward(
         self,
         input_ids: torch.LongTensor | None = None,

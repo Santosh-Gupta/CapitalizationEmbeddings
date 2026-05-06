@@ -5,6 +5,7 @@ import torch
 from capitalization_embeddings.modeling import (
     CapitalizedBertConfig,
     CapitalizedBertForMaskedLM,
+    CapitalizedBertModel,
     CapitalizedBertForTokenClassification,
 )
 
@@ -32,6 +33,20 @@ class ModelingTests(unittest.TestCase):
             ],
             "bert.embeddings.word_embeddings.weight",
         )
+
+    def test_base_model_has_local_head_mask_compatibility(self):
+        model = CapitalizedBertModel(tiny_config(), add_pooling_layer=False)
+
+        no_mask = model.get_head_mask(None, model.config.num_hidden_layers)
+        self.assertEqual(no_mask, [None])
+
+        one_dimensional_mask = torch.ones(model.config.num_attention_heads)
+        expanded = model.get_head_mask(
+            one_dimensional_mask,
+            model.config.num_hidden_layers,
+        )
+
+        self.assertEqual(tuple(expanded.shape), (1, 1, 2, 1, 1))
 
     def test_masked_lm_forward_accepts_capitalization_ids(self):
         model = CapitalizedBertForMaskedLM(tiny_config())
