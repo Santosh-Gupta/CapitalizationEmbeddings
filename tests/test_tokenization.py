@@ -22,12 +22,12 @@ class CapitalizationTests(unittest.TestCase):
 
     def test_offsets_expand_to_whitespace_span(self):
         text = "Tom met TOM and iPhone users."
-        offsets = [(0, 0), (0, 3), (8, 11), (16, 22), (0, 0)]
-        special_tokens_mask = [1, 0, 0, 0, 1]
+        offsets = [(0, 0), (0, 3), (8, 11), (16, 22), (28, 29), (0, 0)]
+        special_tokens_mask = [1, 0, 0, 0, 0, 1]
 
         self.assertEqual(
             capitalization_ids_from_offsets(text, offsets, special_tokens_mask),
-            [NO_CAP, FIRST_CAP, ALL_CAPS, NO_CAP, NO_CAP],
+            [NO_CAP, FIRST_CAP, ALL_CAPS, NO_CAP, NO_CAP, NO_CAP],
         )
 
     def test_word_ids(self):

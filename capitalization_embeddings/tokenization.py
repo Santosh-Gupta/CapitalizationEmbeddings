@@ -76,6 +76,10 @@ def capitalization_ids_from_offsets(
             capitalization_ids.append(NO_CAP)
             continue
 
+        if not any(char.isalpha() for char in text[start:end]):
+            capitalization_ids.append(NO_CAP)
+            continue
+
         source_span = _expand_to_nonspace_span(text, start, end)
         capitalization_ids.append(classify_capitalization(source_span))
 
