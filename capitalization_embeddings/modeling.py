@@ -283,7 +283,10 @@ class CapitalizedBertForMaskedLM(BertPreTrainedModel):
     """Masked LM with an auxiliary capitalization prediction head."""
 
     config_class = CapitalizedBertConfig
-    _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
+    _tied_weights_keys = {
+        "cls.predictions.decoder.bias": "cls.predictions.bias",
+        "cls.predictions.decoder.weight": "bert.embeddings.word_embeddings.weight",
+    }
 
     def __init__(self, config: CapitalizedBertConfig) -> None:
         super().__init__(config)

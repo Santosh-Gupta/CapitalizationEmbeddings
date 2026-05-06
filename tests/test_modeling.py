@@ -24,6 +24,15 @@ def tiny_config(**overrides):
 
 
 class ModelingTests(unittest.TestCase):
+    def test_masked_lm_tied_weight_metadata_is_mapping(self):
+        self.assertIsInstance(CapitalizedBertForMaskedLM._tied_weights_keys, dict)
+        self.assertEqual(
+            CapitalizedBertForMaskedLM._tied_weights_keys[
+                "cls.predictions.decoder.weight"
+            ],
+            "bert.embeddings.word_embeddings.weight",
+        )
+
     def test_masked_lm_forward_accepts_capitalization_ids(self):
         model = CapitalizedBertForMaskedLM(tiny_config())
         input_ids = torch.tensor([[2, 10, 11, 12, 3]])
