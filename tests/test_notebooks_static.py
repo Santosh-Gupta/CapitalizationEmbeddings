@@ -32,14 +32,16 @@ class NotebookStaticTests(unittest.TestCase):
             self.assertIn("processing_class=tokenizer", source, notebook_name)
 
     def test_notebooks_auto_cd_to_drive_repo_when_available(self):
-        expected = "/content/drive/MyDrive/Github/CapitalizationEmbeddings"
+        colab_expected = "/content/drive/MyDrive/Github/CapitalizationEmbeddings"
+        runpod_expected = "/workspace/repos/CapitalizationEmbeddings"
         for path in NOTEBOOK_DIR.glob("*.ipynb"):
             notebook = json.loads(path.read_text(encoding="utf-8"))
             first_code_cell = next(
                 cell for cell in notebook["cells"] if cell["cell_type"] == "code"
             )
             source = "".join(first_code_cell.get("source", []))
-            self.assertIn(expected, source, path.name)
+            self.assertIn(colab_expected, source, path.name)
+            self.assertIn(runpod_expected, source, path.name)
             self.assertIn('drive.mount("/content/drive")', source, path.name)
             self.assertIn("%pip install -q", source, path.name)
             self.assertIn("configure_huggingface_cache", source, path.name)
