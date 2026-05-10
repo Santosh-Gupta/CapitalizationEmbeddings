@@ -259,6 +259,7 @@ def run_one_model(
     metric = metric_fn(label_list, spec.metric)
     training_args = make_training_arguments(
         output_dir=str(output_dir),
+        overwrite_output_dir=True,
         learning_rate=args.learning_rate,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
@@ -267,6 +268,7 @@ def run_one_model(
         logging_steps=20 if args.smoke else 50,
         eval_strategy="epoch",
         save_strategy="epoch",
+        save_total_limit=1,
         load_best_model_at_end=True,
         metric_for_best_model=metric["main_metric"],
         fp16=torch.cuda.is_available() and not args.no_fp16,
