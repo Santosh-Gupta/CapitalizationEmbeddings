@@ -19,6 +19,20 @@ MODEL_SPECS = {
     "capitalized": {"kind": "capitalized", "model_name": "bert-base-uncased"},
 }
 
+FALLBACK_LABELS = {
+    ("lhoestq/conll2003", "ner_tags"): [
+        "O",
+        "B-PER",
+        "I-PER",
+        "B-ORG",
+        "I-ORG",
+        "B-LOC",
+        "I-LOC",
+        "B-MISC",
+        "I-MISC",
+    ],
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -89,7 +103,7 @@ def main() -> None:
         max_eval_samples=args.max_eval_samples,
         max_test_samples=args.max_test_samples,
     )
-    label_list = label_names(raw, spec.label_column)
+    label_list = label_names(raw, spec.dataset_name, spec.label_column)
     id2label = {index: label for index, label in enumerate(label_list)}
     label2id = {label: index for index, label in id2label.items()}
 
@@ -159,10 +173,13 @@ def maybe_select_samples(
     return DatasetDict(selected)
 
 
-def label_names(raw: DatasetDict, label_column: str) -> list[str]:
+def label_names(raw: DatasetDict, dataset_name: str, label_column: str) -> list[str]:
     label_feature = raw["train"].features[label_column].feature
     if hasattr(label_feature, "names"):
         return list(label_feature.names)
+    fallback = FALLBACK_LABELS.get((dataset_name, label_column))
+    if fallback is not None:
+        return fallback
     raise ValueError(f"Dataset label column {label_column!r} does not expose label names.")
 
 

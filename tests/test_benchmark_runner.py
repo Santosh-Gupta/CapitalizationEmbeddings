@@ -30,6 +30,13 @@ class BenchmarkRunnerTests(unittest.TestCase):
             {"uncased", "cased", "capitalized"},
         )
 
+    def test_label_fallbacks_cover_conll2003_ner(self):
+        labels = self.runner.FALLBACK_LABELS[("lhoestq/conll2003", "ner_tags")]
+
+        self.assertEqual(labels[0], "O")
+        self.assertEqual(labels[-1], "I-MISC")
+        self.assertEqual(len(labels), 9)
+
     def test_flatten_metrics_keeps_numeric_values_only(self):
         metrics = {
             "test_f1": 0.9,
