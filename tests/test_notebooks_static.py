@@ -42,6 +42,7 @@ class NotebookStaticTests(unittest.TestCase):
             self.assertIn(expected, source, path.name)
             self.assertIn('drive.mount("/content/drive")', source, path.name)
             self.assertIn("%pip install -q", source, path.name)
+            self.assertIn("configure_huggingface_cache", source, path.name)
 
     def test_dataset_references_avoid_script_datasets(self):
         conll_ner = self.notebook_source("02_finetune_conll2003_ner.ipynb")
@@ -56,6 +57,18 @@ class NotebookStaticTests(unittest.TestCase):
         self.assertIn('DATASET_CONFIG = "wikitext-2-raw-v1"', mlm)
         self.assertIn('hasattr(ner_feature, "names")', conll_ner)
         self.assertIn('hasattr(ner_feature, "names")', conll_baseline)
+
+    def test_training_notebooks_use_runtime_checkpoint_dirs(self):
+        mlm = self.notebook_source("01_continue_pretraining_mlm.ipynb")
+        conll_ner = self.notebook_source("02_finetune_conll2003_ner.ipynb")
+        conll_baseline = self.notebook_source("03_finetune_conll2003_baselines.ipynb")
+
+        self.assertIn('OUTPUT_DIR = checkpoint_dir("mlm")', mlm)
+        self.assertIn('OUTPUT_DIR = checkpoint_dir("conll2003_ner")', conll_ner)
+        self.assertIn('OUTPUT_ROOT = checkpoint_dir("baselines")', conll_baseline)
+        self.assertNotIn("/content/drive/MyDrive/capitalization_embeddings", mlm)
+        self.assertNotIn("/content/drive/MyDrive/capitalization_embeddings", conll_ner)
+        self.assertNotIn("/content/drive/MyDrive/capitalization_embeddings", conll_baseline)
 
 
 if __name__ == "__main__":
