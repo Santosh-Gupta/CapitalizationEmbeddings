@@ -24,12 +24,17 @@ class NotebookStaticTests(unittest.TestCase):
         for notebook_name in training_notebooks:
             source = self.notebook_source(notebook_name)
             self.assertIn("make_training_arguments", source, notebook_name)
-            self.assertIn("make_trainer", source, notebook_name)
             self.assertNotIn("TrainingArguments(", source, notebook_name)
-            self.assertNotIn("Trainer(", source, notebook_name)
             self.assertNotIn("evaluation_strategy", source, notebook_name)
             self.assertIn("eval_strategy", source, notebook_name)
             self.assertIn("processing_class=tokenizer", source, notebook_name)
+
+            if notebook_name == "01_continue_pretraining_mlm.ipynb":
+                self.assertIn("CapitalizedMLMTrainer", source, notebook_name)
+                self.assertIn("trainer = CapitalizedMLMTrainer(", source, notebook_name)
+            else:
+                self.assertIn("make_trainer", source, notebook_name)
+                self.assertNotIn("trainer = Trainer(", source, notebook_name)
 
     def test_notebooks_auto_cd_to_drive_repo_when_available(self):
         colab_expected = "/content/drive/MyDrive/Github/CapitalizationEmbeddings"
@@ -56,7 +61,7 @@ class NotebookStaticTests(unittest.TestCase):
         self.assertNotIn('load_dataset("conll2003")', conll_ner)
         self.assertNotIn('load_dataset("conll2003")', conll_baseline)
         self.assertIn('DATASET_NAME = "Salesforce/wikitext"', mlm)
-        self.assertIn('DATASET_CONFIG = "wikitext-2-raw-v1"', mlm)
+        self.assertIn('DATASET_CONFIG = "wikitext-103-raw-v1"', mlm)
         self.assertIn('hasattr(ner_feature, "names")', conll_ner)
         self.assertIn('hasattr(ner_feature, "names")', conll_baseline)
 
@@ -71,6 +76,15 @@ class NotebookStaticTests(unittest.TestCase):
         self.assertNotIn("/content/drive/MyDrive/capitalization_embeddings", mlm)
         self.assertNotIn("/content/drive/MyDrive/capitalization_embeddings", conll_ner)
         self.assertNotIn("/content/drive/MyDrive/capitalization_embeddings", conll_baseline)
+
+    def test_mlm_notebook_uses_larger_shakedown_and_metric_trainer(self):
+        mlm = self.notebook_source("01_continue_pretraining_mlm.ipynb")
+
+        self.assertIn("CapitalizedMLMTrainer", mlm)
+        self.assertIn("MAX_STEPS = 5_000", mlm)
+        self.assertIn("PER_DEVICE_BATCH_SIZE = 32", mlm)
+        self.assertIn('TRAIN_SPLIT = "train"', mlm)
+        self.assertIn('EVAL_SPLIT = "validation"', mlm)
 
 
 if __name__ == "__main__":

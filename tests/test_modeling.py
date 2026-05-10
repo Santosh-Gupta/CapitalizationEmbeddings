@@ -93,6 +93,8 @@ class ModelingTests(unittest.TestCase):
         self.assertEqual(tuple(outputs.logits.shape), (1, 5, 101))
         self.assertEqual(tuple(outputs.capitalization_logits.shape), (1, 5, 3))
         self.assertIsNotNone(outputs.loss)
+        self.assertIsNotNone(outputs.token_loss)
+        self.assertIsNotNone(outputs.capitalization_loss)
 
     def test_token_classifier_forward_accepts_capitalization_ids(self):
         model = CapitalizedBertForTokenClassification(tiny_config())

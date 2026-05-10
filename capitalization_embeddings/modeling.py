@@ -340,6 +340,8 @@ class CapitalizedBertModel(BertPreTrainedModel):
 @dataclass
 class CapitalizedMaskedLMOutput(ModelOutput):
     loss: torch.FloatTensor | None = None
+    token_loss: torch.FloatTensor | None = None
+    capitalization_loss: torch.FloatTensor | None = None
     logits: torch.FloatTensor | None = None
     capitalization_logits: torch.FloatTensor | None = None
     hidden_states: tuple[torch.FloatTensor, ...] | None = None
@@ -430,6 +432,8 @@ class CapitalizedBertForMaskedLM(BertPreTrainedModel):
         capitalization_scores = self.capitalization_classifier(sequence_output)
 
         loss = None
+        token_loss = None
+        capitalization_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             token_loss = loss_fct(
@@ -440,14 +444,14 @@ class CapitalizedBertForMaskedLM(BertPreTrainedModel):
 
         if capitalization_labels is not None:
             cap_loss_fct = CrossEntropyLoss(ignore_index=-100)
-            cap_loss = cap_loss_fct(
+            capitalization_loss = cap_loss_fct(
                 capitalization_scores.view(-1, self.config.capitalization_vocab_size),
                 capitalization_labels.view(-1),
             )
             loss = (
-                cap_loss * self.config.capitalization_loss_weight
+                capitalization_loss * self.config.capitalization_loss_weight
                 if loss is None
-                else loss + cap_loss * self.config.capitalization_loss_weight
+                else loss + capitalization_loss * self.config.capitalization_loss_weight
             )
 
         if not return_dict:
@@ -456,6 +460,8 @@ class CapitalizedBertForMaskedLM(BertPreTrainedModel):
 
         return CapitalizedMaskedLMOutput(
             loss=loss,
+            token_loss=token_loss,
+            capitalization_loss=capitalization_loss,
             logits=prediction_scores,
             capitalization_logits=capitalization_scores,
             hidden_states=outputs.hidden_states,

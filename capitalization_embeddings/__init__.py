@@ -28,9 +28,11 @@ from .tokenization import (
     classify_capitalization,
     tokenize_with_capitalization,
 )
+from .trainer import CapitalizedMLMTrainer
 
 __all__ = [
     "ALL_CAPS",
+    "CapitalizedMLMTrainer",
     "FIRST_CAP",
     "NO_CAP",
     "CapitalizedBertConfig",
