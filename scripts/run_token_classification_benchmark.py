@@ -17,6 +17,11 @@ MODEL_SPECS = {
     "uncased": {"kind": "baseline", "model_name": "bert-base-uncased"},
     "cased": {"kind": "baseline", "model_name": "bert-base-cased"},
     "capitalized": {"kind": "capitalized", "model_name": "bert-base-uncased"},
+    "capitalized_pretrained": {
+        "kind": "capitalized",
+        "model_name": "bert-base-uncased",
+        "requires_checkpoint": True,
+    },
 }
 
 FALLBACK_LABELS = {
@@ -209,7 +214,13 @@ def run_one_model(
     model_spec = MODEL_SPECS[model_key]
     model_name = model_spec["model_name"]
     is_capitalized = model_spec["kind"] == "capitalized"
-    checkpoint = args.capitalized_checkpoint if is_capitalized else model_name
+    if model_spec.get("requires_checkpoint") and not args.capitalized_checkpoint:
+        raise ValueError(f"{model_key} requires --capitalized-checkpoint.")
+    checkpoint = (
+        args.capitalized_checkpoint
+        if model_spec.get("requires_checkpoint")
+        else ""
+    )
     tokenizer_name = checkpoint or model_name
     output_dir = output_root / model_key
 
@@ -282,7 +293,7 @@ def run_one_model(
     row = {
         "model_key": model_key,
         "model_name": model_name,
-        "capitalized_checkpoint": args.capitalized_checkpoint if is_capitalized else "",
+        "capitalized_checkpoint": checkpoint,
         "output_dir": str(output_dir),
         "train_loss": train_result.training_loss,
     }

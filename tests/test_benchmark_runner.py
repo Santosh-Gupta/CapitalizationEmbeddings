@@ -27,7 +27,10 @@ class BenchmarkRunnerTests(unittest.TestCase):
     def test_model_specs_include_goal_comparison_models(self):
         self.assertEqual(
             set(self.runner.MODEL_SPECS),
-            {"uncased", "cased", "capitalized"},
+            {"uncased", "cased", "capitalized", "capitalized_pretrained"},
+        )
+        self.assertTrue(
+            self.runner.MODEL_SPECS["capitalized_pretrained"]["requires_checkpoint"]
         )
 
     def test_label_fallbacks_cover_conll2003_ner(self):
