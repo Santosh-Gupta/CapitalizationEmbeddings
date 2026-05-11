@@ -71,6 +71,34 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(args.initial_checkpoint, "/tmp/checkpoint")
 
+    def test_resolve_resume_checkpoint_prefers_explicit_checkpoint(self):
+        args = type(
+            "Args",
+            (),
+            {
+                "resume_from_checkpoint": "/tmp/checkpoint-10",
+                "no_auto_resume": False,
+            },
+        )()
+
+        checkpoint = self.runner.resolve_resume_checkpoint(Path("/missing"), args)
+
+        self.assertEqual(checkpoint, "/tmp/checkpoint-10")
+
+    def test_resolve_resume_checkpoint_can_disable_auto_resume(self):
+        args = type(
+            "Args",
+            (),
+            {
+                "resume_from_checkpoint": "",
+                "no_auto_resume": True,
+            },
+        )()
+
+        checkpoint = self.runner.resolve_resume_checkpoint(Path("/missing"), args)
+
+        self.assertIsNone(checkpoint)
+
 
 if __name__ == "__main__":
     unittest.main()

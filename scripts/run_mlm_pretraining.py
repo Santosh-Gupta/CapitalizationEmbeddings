@@ -26,6 +26,8 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional checkpoint to continue MLM pretraining from.",
     )
+    parser.add_argument("--resume-from-checkpoint", default="")
+    parser.add_argument("--no-auto-resume", action="store_true")
     parser.add_argument(
         "--corpus",
         choices=["wikitext103", "conll2003_train"],
@@ -72,6 +74,7 @@ def main() -> None:
         or checkpoint_dir("mlm", args.corpus, args.model_kind)
     )
     output_root.mkdir(parents=True, exist_ok=True)
+    resume_checkpoint = resolve_resume_checkpoint(output_root, args)
 
     model_spec = MODEL_SPECS[args.model_kind]
     tokenizer, model = load_model_and_tokenizer(args.model_kind, args.initial_checkpoint)
@@ -83,7 +86,7 @@ def main() -> None:
 
     training_args = make_training_arguments(
         output_dir=str(output_root),
-        overwrite_output_dir=True,
+        overwrite_output_dir=resume_checkpoint is None,
         max_steps=args.max_steps,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
@@ -111,7 +114,7 @@ def main() -> None:
         processing_class=tokenizer,
     )
 
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
     eval_metrics = trainer.evaluate()
     final_dir = output_root / "final"
     trainer.save_model(str(final_dir))
@@ -121,6 +124,7 @@ def main() -> None:
         "model_kind": args.model_kind,
         "base_model_name": model_spec["model_name"],
         "initial_checkpoint": args.initial_checkpoint,
+        "resume_from_checkpoint": resume_checkpoint or "",
         "corpus": args.corpus,
         "output_dir": str(output_root),
         "final_dir": str(final_dir),
@@ -261,6 +265,19 @@ def trainer_class(model_kind: str) -> type:
     from transformers import Trainer
 
     return Trainer
+
+
+def resolve_resume_checkpoint(output_root: Path, args: argparse.Namespace) -> str | None:
+    if args.resume_from_checkpoint:
+        return args.resume_from_checkpoint
+    if args.no_auto_resume:
+        return None
+
+    from transformers.trainer_utils import get_last_checkpoint
+
+    if output_root.exists():
+        return get_last_checkpoint(str(output_root))
+    return None
 
 
 def flatten_metrics(metrics: dict[str, Any]) -> dict[str, float]:
