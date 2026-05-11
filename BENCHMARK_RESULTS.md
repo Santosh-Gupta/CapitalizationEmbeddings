@@ -313,3 +313,55 @@ capitalized_pretrained - cased_pretrained   = -0.000448 accuracy
 
 PTB is close, but the matched cased control is still ahead after task-mix MLM.
 The raw capitalized model does slightly beat raw cased on this seed.
+
+## Augmented Task-Mix Capitalized MLM
+
+Run date: 2026-05-11
+
+This experiment targeted the weak all-caps channel from the first task-mix MLM
+checkpoint. It continued from:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_task_mix/capitalized_steps3000_clean/final
+```
+
+Training changes:
+
+```text
+corpus: capitalization_task_mix_augmented
+max_steps: 10000
+capitalization_loss_weight: 0.5
+capitalization_class_weights: [1.0, 2.0, 8.0]
+checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/task_mix_augmented/capitalized_from_task_mix_steps10000_wcap/final
+```
+
+Capitalization diagnostics:
+
+| Metric | Previous task-mix checkpoint | Augmented weighted checkpoint |
+| --- | ---: | ---: |
+| capitalization accuracy | 0.937468 | 0.915205 |
+| none accuracy | 0.977120 | 0.937809 |
+| first-cap accuracy | 0.856048 | 0.825383 |
+| all-caps accuracy | 0.468208 | 0.940860 |
+
+The all-caps channel improved dramatically, but the weighting was aggressive and
+reduced no-cap/first-cap accuracy.
+
+Downstream check:
+
+| Benchmark | Previous task-mix capitalized | Augmented weighted capitalized | Prior matched cased |
+| --- | ---: | ---: | ---: |
+| CoNLL-2003 NER F1 | 0.914753 | 0.917202 | 0.914411 |
+| OntoNotes v5 NER F1 | 0.888986 | 0.886542 | 0.892229 |
+
+Current read:
+
+```text
+CoNLL improved enough to become the strongest single-seed controlled result so far.
+OntoNotes worsened, suggesting the all-caps weighting overcorrected and hurt broader
+case behavior.
+```
+
+Next run: use the same augmented corpus with softer capitalization weighting
+(`capitalization_loss_weight=0.35`, class weights `[1.0, 1.5, 4.0]`) to preserve
+more first-cap/no-cap behavior while still lifting all-caps accuracy.
