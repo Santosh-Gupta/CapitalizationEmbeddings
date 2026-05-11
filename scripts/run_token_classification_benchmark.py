@@ -161,6 +161,7 @@ def main() -> None:
     csv_file = results_file.with_suffix(".csv")
 
     raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
+    raw = ensure_validation_split(raw, seed=args.seed)
     raw = maybe_select_samples(
         raw,
         max_train_samples=args.max_train_samples,
@@ -211,6 +212,23 @@ def load_benchmark_dataset(dataset_name: str, dataset_config: str | None) -> Dat
     if dataset_config:
         return load_dataset(dataset_name, dataset_config)
     return load_dataset(dataset_name)
+
+
+def ensure_validation_split(raw: DatasetDict, seed: int) -> DatasetDict:
+    if "validation" in raw:
+        return raw
+
+    from datasets import DatasetDict
+
+    split = raw["train"].train_test_split(test_size=0.1, seed=seed)
+    datasets = {
+        key: value
+        for key, value in raw.items()
+        if key != "train"
+    }
+    datasets["train"] = split["train"]
+    datasets["validation"] = split["test"]
+    return DatasetDict(datasets)
 
 
 def maybe_select_samples(
