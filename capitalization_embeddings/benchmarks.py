@@ -40,7 +40,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
     BenchmarkSpec(
         key="wnut17_ner",
         task_type="token_classification",
-        dataset_name="wnut_17",
+        dataset_name="flaitenberger/wnut_17",
         dataset_config=None,
         text_columns=("tokens",),
         label_column="ner_tags",

@@ -229,7 +229,7 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
         return token_rows(raw, "tokens")
 
     if corpus == "wnut17_train":
-        raw = load_dataset("wnut_17")
+        raw = load_dataset("flaitenberger/wnut_17")
         return token_rows(raw, "tokens")
 
     if corpus == "ontonotes5_train":
@@ -245,7 +245,7 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
         eval_rows = []
         for dataset, token_column, eval_split in (
             (load_dataset("lhoestq/conll2003"), "tokens", "validation"),
-            (load_dataset("wnut_17"), "tokens", "validation"),
+            (load_dataset("flaitenberger/wnut_17"), "tokens", "validation"),
             (load_dataset("tner/ontonotes5"), "tokens", "validation"),
             (load_dataset("batterydata/pos_tagging"), "words", "test"),
         ):

@@ -21,6 +21,11 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertEqual(spec.metric, "seqeval_f1")
         self.assertEqual(spec.status, "implemented")
 
+    def test_wnut_uses_script_free_dataset_mirror(self):
+        spec = get_benchmark("wnut17_ner")
+
+        self.assertEqual(spec.dataset_name, "flaitenberger/wnut_17")
+
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]
 
