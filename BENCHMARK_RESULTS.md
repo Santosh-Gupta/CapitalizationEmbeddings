@@ -207,3 +207,109 @@ capitalized_pretrained - bert-base-cased    = +0.002128 F1
 The margin over the matched cased control is small, but the direction remains
 positive after controlling for both generic continued pretraining and
 domain-adaptive pretraining.
+
+## Task-Mix MLM Controls Across CoNLL, WNUT-17, OntoNotes, and PTB POS
+
+Run date: 2026-05-11
+
+Task-mix continued pretraining used Wikitext-103 checkpoints as the starting
+point, then ran 3000 MLM steps on a capitalization-heavy mix of CoNLL-2003,
+WNUT-17, OntoNotes v5, and PTB POS train text. The same budget was applied to
+`bert-base-uncased`, `bert-base-cased`, and the capitalized-embedding model.
+
+Pretraining checkpoints:
+
+```text
+uncased_pretrained:     /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_task_mix/uncased_steps3000/final
+cased_pretrained:       /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_task_mix/cased_steps3000/final
+capitalized_pretrained: /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_task_mix/capitalized_steps3000_clean/final
+```
+
+The capitalized task-mix MLM checkpoint reached capitalization accuracy
+`0.937468`, first-cap accuracy `0.856048`, all-caps accuracy `0.468208`, and
+none-case accuracy `0.977120` on the task-mix validation split.
+
+### CoNLL-2003 NER
+
+| Model | Task-mix MLM checkpoint | Test F1 | Test precision | Test recall | Test accuracy |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `bert-base-uncased` | no | 0.904548 | 0.898933 | 0.910234 | 0.980640 |
+| `bert-base-cased` | no | 0.913257 | 0.905782 | 0.920857 | 0.982599 |
+| `capitalized` initialized from `bert-base-uncased` | no | 0.910126 | 0.900659 | 0.919795 | 0.982449 |
+| `uncased_pretrained` | yes | 0.905051 | 0.898030 | 0.912181 | 0.980597 |
+| `cased_pretrained` | yes | 0.914411 | 0.907711 | 0.921211 | 0.982815 |
+| `capitalized_pretrained` | yes | 0.914753 | 0.909075 | 0.920503 | 0.982793 |
+
+Current read:
+
+```text
+capitalized_pretrained - uncased_pretrained = +0.009703 F1
+capitalized_pretrained - cased_pretrained   = +0.000342 F1
+```
+
+### WNUT-17 NER
+
+| Model | Task-mix MLM checkpoint | Test F1 | Test precision | Test recall | Test accuracy |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `bert-base-uncased` | no | 0.461796 | 0.579832 | 0.383689 | 0.947287 |
+| `bert-base-cased` | no | 0.460768 | 0.576602 | 0.383689 | 0.949085 |
+| `capitalized` initialized from `bert-base-uncased` | no | 0.428332 | 0.537815 | 0.355885 | 0.946390 |
+| `uncased_pretrained` | yes | 0.452765 | 0.598174 | 0.364226 | 0.946646 |
+| `cased_pretrained` | yes | 0.471038 | 0.573901 | 0.399444 | 0.947974 |
+| `capitalized_pretrained` | yes | 0.448841 | 0.575362 | 0.367933 | 0.948313 |
+
+Current read:
+
+```text
+capitalized_pretrained - uncased_pretrained = -0.003924 F1
+capitalized_pretrained - cased_pretrained   = -0.022197 F1
+```
+
+WNUT-17 is currently a negative result for the method. This matters because it
+tests noisier social-media entities rather than clean newswire capitalization.
+
+### OntoNotes v5 NER
+
+| Model | Task-mix MLM checkpoint | Test F1 | Test precision | Test recall | Test accuracy |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `bert-base-uncased` | no | 0.871419 | 0.860808 | 0.882295 | 0.977600 |
+| `bert-base-cased` | no | 0.886714 | 0.872421 | 0.901484 | 0.981810 |
+| `capitalized` initialized from `bert-base-uncased` | no | 0.888177 | 0.877362 | 0.899263 | 0.981365 |
+| `uncased_pretrained` | yes | 0.873310 | 0.863230 | 0.883628 | 0.977796 |
+| `cased_pretrained` | yes | 0.892229 | 0.880536 | 0.904237 | 0.982170 |
+| `capitalized_pretrained` | yes | 0.888986 | 0.877673 | 0.900595 | 0.981758 |
+
+Current read:
+
+```text
+capitalized - bert-base-uncased             = +0.016758 F1
+capitalized - bert-base-cased               = +0.001463 F1
+capitalized_pretrained - uncased_pretrained = +0.015676 F1
+capitalized_pretrained - cased_pretrained   = -0.003243 F1
+```
+
+OntoNotes is the most encouraging raw-architecture result so far: the
+capitalized-embedding model beats both raw uncased and raw cased on this seed.
+Under the stricter matched task-mix MLM control, however, cased pretraining
+wins by a clearer margin.
+
+### PTB POS
+
+| Model | Task-mix MLM checkpoint | Test accuracy | Test loss |
+| --- | --- | ---: | ---: |
+| `bert-base-uncased` | no | 0.973423 | 0.101505 |
+| `bert-base-cased` | no | 0.976636 | 0.089682 |
+| `capitalized` initialized from `bert-base-uncased` | no | 0.976979 | 0.092297 |
+| `uncased_pretrained` | yes | 0.973054 | 0.103803 |
+| `cased_pretrained` | yes | 0.977532 | 0.085746 |
+| `capitalized_pretrained` | yes | 0.977084 | 0.092062 |
+
+Current read:
+
+```text
+capitalized_pretrained - uncased_pretrained = +0.004030 accuracy
+capitalized_pretrained - cased_pretrained   = -0.000448 accuracy
+```
+
+PTB is close, but the matched cased control is still ahead after task-mix MLM.
+The raw capitalized model does slightly beat raw cased on this seed.
