@@ -22,6 +22,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-kind", choices=sorted(MODEL_SPECS), required=True)
     parser.add_argument(
+        "--initial-checkpoint",
+        default="",
+        help="Optional checkpoint to continue MLM pretraining from.",
+    )
+    parser.add_argument(
         "--corpus",
         choices=["wikitext103", "conll2003_train"],
         default="wikitext103",
@@ -69,7 +74,7 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
 
     model_spec = MODEL_SPECS[args.model_kind]
-    tokenizer, model = load_model_and_tokenizer(args.model_kind)
+    tokenizer, model = load_model_and_tokenizer(args.model_kind, args.initial_checkpoint)
     tokenized_train, tokenized_eval = load_and_tokenize_corpus(args, tokenizer)
     data_collator = make_data_collator(args, tokenizer, model_spec["kind"])
     trainer_cls = trainer_class(model_spec["kind"])
@@ -115,6 +120,7 @@ def main() -> None:
     row = {
         "model_kind": args.model_kind,
         "base_model_name": model_spec["model_name"],
+        "initial_checkpoint": args.initial_checkpoint,
         "corpus": args.corpus,
         "output_dir": str(output_root),
         "final_dir": str(final_dir),
@@ -128,17 +134,25 @@ def main() -> None:
     print(json.dumps(row, indent=2, sort_keys=True))
 
 
-def load_model_and_tokenizer(model_kind: str) -> tuple[Any, Any]:
+def load_model_and_tokenizer(model_kind: str, initial_checkpoint: str = "") -> tuple[Any, Any]:
     from transformers import AutoModelForMaskedLM, AutoTokenizer
 
-    from capitalization_embeddings import CapitalizedBertForMaskedLM
+    from capitalization_embeddings import CapitalizedBertConfig, CapitalizedBertForMaskedLM
 
     model_spec = MODEL_SPECS[model_kind]
-    tokenizer = AutoTokenizer.from_pretrained(model_spec["model_name"], use_fast=True)
+    tokenizer_name = initial_checkpoint or model_spec["model_name"]
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, use_fast=True)
     if model_spec["kind"] == "capitalized":
-        model = CapitalizedBertForMaskedLM.from_uncased_pretrained(model_spec["model_name"])
+        if initial_checkpoint:
+            config = CapitalizedBertConfig.from_pretrained(initial_checkpoint)
+            model = CapitalizedBertForMaskedLM.from_pretrained(
+                initial_checkpoint,
+                config=config,
+            )
+        else:
+            model = CapitalizedBertForMaskedLM.from_uncased_pretrained(model_spec["model_name"])
     else:
-        model = AutoModelForMaskedLM.from_pretrained(model_spec["model_name"])
+        model = AutoModelForMaskedLM.from_pretrained(initial_checkpoint or model_spec["model_name"])
     return tokenizer, model
 
 

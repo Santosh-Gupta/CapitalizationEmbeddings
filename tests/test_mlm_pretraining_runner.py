@@ -54,6 +54,23 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
             self.assertIn('"model_kind": "uncased"', path.read_text())
 
+    def test_parse_args_accepts_initial_checkpoint(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "uncased",
+            "--initial-checkpoint",
+            "/tmp/checkpoint",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertEqual(args.initial_checkpoint, "/tmp/checkpoint")
+
 
 if __name__ == "__main__":
     unittest.main()
