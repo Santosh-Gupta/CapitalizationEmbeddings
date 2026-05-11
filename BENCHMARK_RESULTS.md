@@ -158,3 +158,52 @@ This directly controls for the possibility that the capitalized model only won
 because it received extra generic MLM training. Under equal Wikitext-103
 continued-pretraining budget, the capitalized model outperformed both
 pretrained controls on this seed.
+
+## CoNLL-2003 NER With Wikitext-103 Then Domain MLM
+
+Run date: 2026-05-11
+
+Sequential pretraining:
+
+1. Continue MLM on Wikitext-103 for 5000 steps.
+2. Continue MLM again on CoNLL-2003 train text for 1000 steps.
+3. Fine-tune on CoNLL-2003 NER for 3 epochs.
+
+This is the strictest CoNLL control so far: all model families received both
+the generic MLM stage and the downstream-domain MLM stage.
+
+Fine-tuning command:
+
+```bash
+python scripts/run_token_classification_benchmark.py \
+  --benchmark conll2003_ner \
+  --models uncased cased capitalized uncased_pretrained cased_pretrained capitalized_pretrained \
+  --uncased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_conll2003_train/uncased_steps1000/final \
+  --cased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_conll2003_train/cased_steps1000/final \
+  --capitalized-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103_then_conll2003_train/capitalized_steps1000/final \
+  --epochs 3 \
+  --batch-size 16 \
+  --learning-rate 3e-5 \
+  --results-file /workspace/capitalization_embeddings/checkpoints/benchmarks/conll2003_ner/wikitext_then_domain_pretrain_results.jsonl
+```
+
+| Model | Wikitext + domain MLM checkpoint | Test F1 | Test precision | Test recall | Test accuracy |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `bert-base-uncased` | no | 0.904355 | 0.898898 | 0.909880 | 0.980597 |
+| `bert-base-cased` | no | 0.913257 | 0.905782 | 0.920857 | 0.982599 |
+| `capitalized` initialized from `bert-base-uncased` | no | 0.910126 | 0.900659 | 0.919795 | 0.982449 |
+| `uncased_pretrained` | yes | 0.903192 | 0.894719 | 0.911827 | 0.980403 |
+| `cased_pretrained` | yes | 0.915045 | 0.909998 | 0.920149 | 0.983224 |
+| `capitalized_pretrained` | yes | 0.915385 | 0.908599 | 0.922273 | 0.982729 |
+
+Current read:
+
+```text
+capitalized_pretrained - uncased_pretrained = +0.012193 F1
+capitalized_pretrained - cased_pretrained   = +0.000340 F1
+capitalized_pretrained - bert-base-cased    = +0.002128 F1
+```
+
+The margin over the matched cased control is small, but the direction remains
+positive after controlling for both generic continued pretraining and
+domain-adaptive pretraining.
