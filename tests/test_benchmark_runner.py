@@ -27,11 +27,52 @@ class BenchmarkRunnerTests(unittest.TestCase):
     def test_model_specs_include_goal_comparison_models(self):
         self.assertEqual(
             set(self.runner.MODEL_SPECS),
-            {"uncased", "cased", "capitalized", "capitalized_pretrained"},
+            {
+                "uncased",
+                "uncased_pretrained",
+                "cased",
+                "cased_pretrained",
+                "capitalized",
+                "capitalized_pretrained",
+            },
         )
-        self.assertTrue(
-            self.runner.MODEL_SPECS["capitalized_pretrained"]["requires_checkpoint"]
+        self.assertEqual(
+            self.runner.MODEL_SPECS["uncased_pretrained"]["checkpoint_arg"],
+            "uncased_checkpoint",
         )
+        self.assertEqual(
+            self.runner.MODEL_SPECS["cased_pretrained"]["checkpoint_arg"],
+            "cased_checkpoint",
+        )
+        self.assertEqual(
+            self.runner.MODEL_SPECS["capitalized_pretrained"]["checkpoint_arg"],
+            "capitalized_checkpoint",
+        )
+
+    def test_checkpoint_for_model_requires_expected_cli_arg(self):
+        args = type(
+            "Args",
+            (),
+            {
+                "uncased_checkpoint": "/tmp/uncased",
+                "cased_checkpoint": "",
+                "capitalized_checkpoint": "",
+            },
+        )()
+
+        checkpoint = self.runner.checkpoint_for_model(
+            "uncased_pretrained",
+            self.runner.MODEL_SPECS["uncased_pretrained"],
+            args,
+        )
+
+        self.assertEqual(checkpoint, "/tmp/uncased")
+        with self.assertRaisesRegex(ValueError, "--cased-checkpoint"):
+            self.runner.checkpoint_for_model(
+                "cased_pretrained",
+                self.runner.MODEL_SPECS["cased_pretrained"],
+                args,
+            )
 
     def test_label_fallbacks_cover_conll2003_ner(self):
         labels = self.runner.FALLBACK_LABELS[("lhoestq/conll2003", "ner_tags")]

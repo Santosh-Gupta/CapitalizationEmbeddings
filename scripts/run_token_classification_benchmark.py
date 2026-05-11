@@ -15,12 +15,22 @@ from typing import Any
 
 MODEL_SPECS = {
     "uncased": {"kind": "baseline", "model_name": "bert-base-uncased"},
+    "uncased_pretrained": {
+        "kind": "baseline",
+        "model_name": "bert-base-uncased",
+        "checkpoint_arg": "uncased_checkpoint",
+    },
     "cased": {"kind": "baseline", "model_name": "bert-base-cased"},
+    "cased_pretrained": {
+        "kind": "baseline",
+        "model_name": "bert-base-cased",
+        "checkpoint_arg": "cased_checkpoint",
+    },
     "capitalized": {"kind": "capitalized", "model_name": "bert-base-uncased"},
     "capitalized_pretrained": {
         "kind": "capitalized",
         "model_name": "bert-base-uncased",
-        "requires_checkpoint": True,
+        "checkpoint_arg": "capitalized_checkpoint",
     },
 }
 
@@ -53,6 +63,8 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional continued-pretraining checkpoint for the capitalized model.",
     )
+    parser.add_argument("--uncased-checkpoint", default="")
+    parser.add_argument("--cased-checkpoint", default="")
     parser.add_argument("--output-root", default="")
     parser.add_argument("--results-file", default="")
     parser.add_argument("--max-length", type=int, default=192)
@@ -214,13 +226,7 @@ def run_one_model(
     model_spec = MODEL_SPECS[model_key]
     model_name = model_spec["model_name"]
     is_capitalized = model_spec["kind"] == "capitalized"
-    if model_spec.get("requires_checkpoint") and not args.capitalized_checkpoint:
-        raise ValueError(f"{model_key} requires --capitalized-checkpoint.")
-    checkpoint = (
-        args.capitalized_checkpoint
-        if model_spec.get("requires_checkpoint")
-        else ""
-    )
+    checkpoint = checkpoint_for_model(model_key, model_spec, args)
     tokenizer_name = checkpoint or model_name
     output_dir = output_root / model_key
 
@@ -248,7 +254,7 @@ def run_one_model(
         data_collator = DataCollatorForCapitalizedTokenClassification(tokenizer=tokenizer)
     else:
         model = AutoModelForTokenClassification.from_pretrained(
-            model_name,
+            checkpoint or model_name,
             num_labels=len(label_list),
             id2label=id2label,
             label2id=label2id,
@@ -295,12 +301,28 @@ def run_one_model(
     row = {
         "model_key": model_key,
         "model_name": model_name,
-        "capitalized_checkpoint": checkpoint,
+        "pretraining_checkpoint": checkpoint,
         "output_dir": str(output_dir),
         "train_loss": train_result.training_loss,
     }
     row.update(flatten_metrics(test_metrics))
     return row
+
+
+def checkpoint_for_model(
+    model_key: str,
+    model_spec: dict[str, Any],
+    args: argparse.Namespace,
+) -> str:
+    checkpoint_arg = model_spec.get("checkpoint_arg")
+    if checkpoint_arg is None:
+        return ""
+
+    checkpoint = getattr(args, checkpoint_arg)
+    if not checkpoint:
+        cli_arg = checkpoint_arg.replace("_", "-")
+        raise ValueError(f"{model_key} requires --{cli_arg}.")
+    return checkpoint
 
 
 def tokenize_and_align_labels(
