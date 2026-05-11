@@ -96,3 +96,65 @@ capitalized_pretrained - cased_pretrained   = +0.001115 F1
 This is a more useful comparison than the first result because all three model
 families received matched MLM adaptation on the downstream domain before
 fine-tuning.
+
+## CoNLL-2003 NER With Matched Wikitext-103 MLM
+
+Run date: 2026-05-10
+
+Pretraining command pattern:
+
+```bash
+python scripts/run_mlm_pretraining.py \
+  --model-kind {uncased,cased,capitalized} \
+  --corpus wikitext103 \
+  --max-steps 5000 \
+  --batch-size 32 \
+  --gradient-accumulation-steps 2
+```
+
+Notes:
+
+- The `cased` Wikitext control was rerun cleanly in
+  `cased_steps5000_clean` because resuming the partial checkpoint hit the
+  PyTorch 2.4 / Transformers checkpoint-loading safety guard for optimizer
+  state.
+- The `capitalized` Wikitext MLM checkpoint reached capitalization accuracy
+  `0.954554`, first-cap accuracy `0.878837`, all-caps accuracy `0.568528`,
+  and token loss `1.560557` on the Wikitext validation subset.
+
+Fine-tuning command:
+
+```bash
+python scripts/run_token_classification_benchmark.py \
+  --benchmark conll2003_ner \
+  --models uncased cased capitalized uncased_pretrained cased_pretrained capitalized_pretrained \
+  --uncased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103/uncased_steps5000/final \
+  --cased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103/cased_steps5000_clean/final \
+  --capitalized-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/wikitext103/capitalized_steps5000/final \
+  --epochs 3 \
+  --batch-size 16 \
+  --learning-rate 3e-5 \
+  --results-file /workspace/capitalization_embeddings/checkpoints/benchmarks/conll2003_ner/wikitext_pretrain_results.jsonl
+```
+
+| Model | Wikitext MLM checkpoint | Test F1 | Test precision | Test recall | Test accuracy |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `bert-base-uncased` | no | 0.904259 | 0.898880 | 0.909703 | 0.980575 |
+| `bert-base-cased` | no | 0.913257 | 0.905782 | 0.920857 | 0.982599 |
+| `capitalized` initialized from `bert-base-uncased` | no | 0.910126 | 0.900659 | 0.919795 | 0.982449 |
+| `uncased_pretrained` | yes | 0.902818 | 0.895351 | 0.910411 | 0.980338 |
+| `cased_pretrained` | yes | 0.910449 | 0.903856 | 0.917139 | 0.982492 |
+| `capitalized_pretrained` | yes | 0.914140 | 0.907521 | 0.920857 | 0.982879 |
+
+Current read:
+
+```text
+capitalized_pretrained - uncased_pretrained = +0.011322 F1
+capitalized_pretrained - cased_pretrained   = +0.003691 F1
+capitalized_pretrained - bert-base-cased    = +0.000883 F1
+```
+
+This directly controls for the possibility that the capitalized model only won
+because it received extra generic MLM training. Under equal Wikitext-103
+continued-pretraining budget, the capitalized model outperformed both
+pretrained controls on this seed.
