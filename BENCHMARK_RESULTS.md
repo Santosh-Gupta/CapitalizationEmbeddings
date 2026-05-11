@@ -387,3 +387,37 @@ OntoNotes, and it gave up most of the aggressive run's CoNLL gain. The next
 hypothesis is that synthetic capitalization augmentation is causing distribution
 shift. The next run should use the natural task-mix corpus with weighted
 capitalization loss but without synthetic case variants.
+
+Natural task-mix follow-up: same soft capitalization weights, but without
+synthetic case augmentation.
+
+```text
+corpus: capitalization_task_mix
+max_steps: 10000
+capitalization_loss_weight: 0.35
+capitalization_class_weights: [1.0, 1.5, 4.0]
+checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/task_mix_weighted/capitalized_from_task_mix_steps10000_softcap/final
+```
+
+Capitalization diagnostics:
+
+| Metric | Natural weighted checkpoint |
+| --- | ---: |
+| capitalization accuracy | 0.950769 |
+| none accuracy | 0.971038 |
+| first-cap accuracy | 0.885391 |
+| all-caps accuracy | 0.903030 |
+| eval token loss | 2.162145 |
+
+Downstream check:
+
+| Benchmark | Natural weighted capitalized |
+| --- | ---: |
+| CoNLL-2003 NER F1 | 0.914100 |
+| OntoNotes v5 NER F1 | 0.887110 |
+
+This run gives the best capitalization diagnostic balance, but downstream
+performance does not improve. The current evidence suggests that directly
+optimizing auxiliary capitalization accuracy is not sufficient; the next data
+direction should be real acronym-heavy corpora rather than synthetic case
+variants or heavier capitalization loss.
