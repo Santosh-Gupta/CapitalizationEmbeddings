@@ -10,6 +10,7 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertEqual(keys[0], "conll2003_ner")
         self.assertIn("wnut17_ner", keys)
         self.assertIn("ontonotes5_ner", keys)
+        self.assertIn("ptb_pos", keys)
         self.assertIn("conll2003_pos", keys)
 
     def test_get_benchmark_returns_specs_by_key(self):

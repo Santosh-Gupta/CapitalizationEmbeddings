@@ -46,6 +46,53 @@ FALLBACK_LABELS = {
         "B-MISC",
         "I-MISC",
     ],
+    ("batterydata/pos_tagging", "labels"): [
+        "#",
+        "$",
+        "''",
+        ",",
+        "-LRB-",
+        "-RRB-",
+        ".",
+        ":",
+        "CC",
+        "CD",
+        "DT",
+        "EX",
+        "FW",
+        "IN",
+        "JJ",
+        "JJR",
+        "JJS",
+        "LS",
+        "MD",
+        "NN",
+        "NNP",
+        "NNPS",
+        "NNS",
+        "PDT",
+        "POS",
+        "PRP",
+        "PRP$",
+        "RB",
+        "RBR",
+        "RBS",
+        "RP",
+        "SYM",
+        "TO",
+        "UH",
+        "VB",
+        "VBD",
+        "VBG",
+        "VBN",
+        "VBP",
+        "VBZ",
+        "WDT",
+        "WP",
+        "WP$",
+        "WRB",
+        "``",
+    ],
 }
 
 
@@ -194,6 +241,14 @@ def label_names(raw: DatasetDict, dataset_name: str, label_column: str) -> list[
     label_feature = raw["train"].features[label_column].feature
     if hasattr(label_feature, "names"):
         return list(label_feature.names)
+    labels = {
+        label
+        for label_row in raw["train"][label_column]
+        for label in label_row
+        if isinstance(label, str)
+    }
+    if labels:
+        return sorted(labels)
     fallback = FALLBACK_LABELS.get((dataset_name, label_column))
     if fallback is not None:
         return fallback
@@ -236,6 +291,8 @@ def run_one_model(
             examples=examples,
             tokenizer=tokenizer,
             label_column=spec.label_column,
+            token_column=spec.text_columns[0],
+            label2id=label2id,
             max_length=args.max_length,
             capitalized=is_capitalized,
         ),
@@ -330,6 +387,8 @@ def tokenize_and_align_labels(
     examples: dict[str, list[Any]],
     tokenizer: Any,
     label_column: str,
+    token_column: str,
+    label2id: dict[str, int],
     max_length: int,
     capitalized: bool,
 ) -> dict[str, Any]:
@@ -338,14 +397,14 @@ def tokenize_and_align_labels(
     if capitalized:
         tokenized = tokenize_with_capitalization(
             tokenizer,
-            examples["tokens"],
+            examples[token_column],
             is_split_into_words=True,
             truncation=True,
             max_length=max_length,
         )
     else:
         tokenized = tokenizer(
-            examples["tokens"],
+            examples[token_column],
             is_split_into_words=True,
             truncation=True,
             max_length=max_length,
@@ -353,6 +412,8 @@ def tokenize_and_align_labels(
 
     aligned_labels = []
     for batch_index, word_labels in enumerate(examples[label_column]):
+        if word_labels and isinstance(word_labels[0], str):
+            word_labels = [label2id[label] for label in word_labels]
         word_ids = tokenized.word_ids(batch_index=batch_index)
         previous_word_id = None
         label_ids = []

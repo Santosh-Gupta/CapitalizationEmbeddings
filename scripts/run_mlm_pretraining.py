@@ -17,6 +17,15 @@ MODEL_SPECS = {
     "capitalized": {"kind": "capitalized", "model_name": "bert-base-uncased"},
 }
 
+CORPUS_CHOICES = (
+    "wikitext103",
+    "conll2003_train",
+    "wnut17_train",
+    "ontonotes5_train",
+    "ptb_pos_train",
+    "capitalization_task_mix",
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -30,7 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-auto-resume", action="store_true")
     parser.add_argument(
         "--corpus",
-        choices=["wikitext103", "conll2003_train"],
+        choices=CORPUS_CHOICES,
         default="wikitext103",
     )
     parser.add_argument("--output-root", default="")
@@ -217,19 +226,64 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
 
     if corpus == "conll2003_train":
         raw = load_dataset("lhoestq/conll2003")
+        return token_rows(raw, "tokens")
 
-        def rows(split: str) -> dict[str, list[str]]:
-            return {
-                "text": [
-                    " ".join(tokens)
-                    for tokens in raw[split]["tokens"]
-                    if tokens
-                ]
-            }
+    if corpus == "wnut17_train":
+        raw = load_dataset("wnut_17")
+        return token_rows(raw, "tokens")
 
-        return Dataset.from_dict(rows("train")), Dataset.from_dict(rows("validation")), "text"
+    if corpus == "ontonotes5_train":
+        raw = load_dataset("tner/ontonotes5")
+        return token_rows(raw, "tokens")
+
+    if corpus == "ptb_pos_train":
+        raw = load_dataset("batterydata/pos_tagging")
+        return token_rows(raw, "words", eval_split="test")
+
+    if corpus == "capitalization_task_mix":
+        train_rows = []
+        eval_rows = []
+        for dataset, token_column, eval_split in (
+            (load_dataset("lhoestq/conll2003"), "tokens", "validation"),
+            (load_dataset("wnut_17"), "tokens", "validation"),
+            (load_dataset("tner/ontonotes5"), "tokens", "validation"),
+            (load_dataset("batterydata/pos_tagging"), "words", "test"),
+        ):
+            train, eval_dataset, _ = token_rows(
+                dataset,
+                token_column,
+                eval_split=eval_split,
+            )
+            train_rows.extend(train["text"])
+            eval_rows.extend(eval_dataset["text"])
+        return (
+            Dataset.from_dict({"text": train_rows}),
+            Dataset.from_dict({"text": eval_rows}),
+            "text",
+        )
 
     raise ValueError(f"Unsupported corpus {corpus!r}.")
+
+
+def token_rows(
+    raw: Any,
+    token_column: str,
+    *,
+    train_split: str = "train",
+    eval_split: str = "validation",
+) -> tuple[Any, Any, str]:
+    from datasets import Dataset
+
+    def rows(split: str) -> dict[str, list[str]]:
+        return {
+            "text": [
+                " ".join(tokens)
+                for tokens in raw[split][token_column]
+                if tokens
+            ]
+        }
+
+    return Dataset.from_dict(rows(train_split)), Dataset.from_dict(rows(eval_split)), "text"
 
 
 def filter_text(dataset: Any, text_column: str) -> Any:

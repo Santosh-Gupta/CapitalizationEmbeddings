@@ -50,6 +50,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
             "Emerging and noisy social-media entities test whether capitalization "
             "features help outside clean newswire text."
         ),
+        status="implemented",
     ),
     BenchmarkSpec(
         key="ontonotes5_ner",
@@ -64,6 +65,22 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
             "Larger multi-genre NER benchmark with many proper-name and acronym "
             "categories; useful if dataset access and labels are stable."
         ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="ptb_pos",
+        task_type="token_classification",
+        dataset_name="batterydata/pos_tagging",
+        dataset_config=None,
+        text_columns=("words",),
+        label_column="labels",
+        metric="accuracy",
+        priority=4,
+        why_capitalization_matters=(
+            "Penn Treebank-style POS tagging should benefit from case cues for "
+            "proper nouns, sentence-initial ambiguity, and acronyms."
+        ),
+        status="implemented",
     ),
     BenchmarkSpec(
         key="conll2003_pos",
@@ -73,11 +90,12 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("tokens",),
         label_column="pos_tags",
         metric="accuracy",
-        priority=4,
+        priority=5,
         why_capitalization_matters=(
             "Proper-noun POS tags are case-sensitive, making this a cheap auxiliary "
             "check alongside CoNLL NER."
         ),
+        status="implemented",
     ),
 )
 

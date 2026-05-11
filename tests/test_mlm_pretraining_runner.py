@@ -71,6 +71,23 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(args.initial_checkpoint, "/tmp/checkpoint")
 
+    def test_parse_args_accepts_capitalization_task_mix_corpus(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "capitalized",
+            "--corpus",
+            "capitalization_task_mix",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertEqual(args.corpus, "capitalization_task_mix")
+
     def test_resolve_resume_checkpoint_prefers_explicit_checkpoint(self):
         args = type(
             "Args",
