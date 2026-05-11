@@ -25,6 +25,7 @@ CORPUS_CHOICES = (
     "ptb_pos_train",
     "capitalization_task_mix",
     "capitalization_task_mix_augmented",
+    "capitalization_real_acronym_mix",
 )
 
 
@@ -271,24 +272,16 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
         raw = load_dataset("batterydata/pos_tagging")
         return token_rows(raw, "words", eval_split="test")
 
-    if corpus in {"capitalization_task_mix", "capitalization_task_mix_augmented"}:
-        train_rows = []
-        eval_rows = []
-        for dataset, token_column, eval_split in (
-            (load_dataset("lhoestq/conll2003"), "tokens", "validation"),
-            (load_dataset("flaitenberger/wnut_17"), "tokens", "validation"),
-            (load_dataset("extraordinarylab/ontonotes5"), "tokens", "validation"),
-            (load_dataset("batterydata/pos_tagging"), "words", "test"),
-        ):
-            train, eval_dataset, _ = token_rows(
-                dataset,
-                token_column,
-                eval_split=eval_split,
-            )
-            train_rows.extend(train["text"])
-            eval_rows.extend(eval_dataset["text"])
+    if corpus in {
+        "capitalization_task_mix",
+        "capitalization_task_mix_augmented",
+        "capitalization_real_acronym_mix",
+    }:
+        train_rows, eval_rows = task_mix_rows()
         if corpus == "capitalization_task_mix_augmented":
             train_rows = augment_capitalization_rows(train_rows)
+        if corpus == "capitalization_real_acronym_mix":
+            train_rows, eval_rows = add_real_acronym_rows(train_rows, eval_rows)
         return (
             Dataset.from_dict({"text": train_rows}),
             Dataset.from_dict({"text": eval_rows}),
@@ -317,6 +310,105 @@ def token_rows(
         }
 
     return Dataset.from_dict(rows(train_split)), Dataset.from_dict(rows(eval_split)), "text"
+
+
+def task_mix_rows() -> tuple[list[str], list[str]]:
+    from datasets import load_dataset
+
+    train_rows = []
+    eval_rows = []
+    for dataset, token_column, eval_split in (
+        (load_dataset("lhoestq/conll2003"), "tokens", "validation"),
+        (load_dataset("flaitenberger/wnut_17"), "tokens", "validation"),
+        (load_dataset("extraordinarylab/ontonotes5"), "tokens", "validation"),
+        (load_dataset("batterydata/pos_tagging"), "words", "test"),
+    ):
+        train, eval_dataset, _ = token_rows(
+            dataset,
+            token_column,
+            eval_split=eval_split,
+        )
+        train_rows.extend(train["text"])
+        eval_rows.extend(eval_dataset["text"])
+    return train_rows, eval_rows
+
+
+def add_real_acronym_rows(
+    train_rows: list[str],
+    eval_rows: list[str],
+) -> tuple[list[str], list[str]]:
+    from datasets import load_dataset
+
+    real_rows = []
+    real_rows.extend(
+        text_rows_from_dataset(
+            load_dataset("ccdv/pubmed-summarization", split="train[:50000]"),
+            ("article", "abstract"),
+        ),
+    )
+    real_rows.extend(
+        text_rows_from_dataset(
+            load_dataset("billsum", split="train"),
+            ("text", "summary", "title"),
+        ),
+    )
+    real_rows.extend(
+        text_rows_from_dataset(
+            load_dataset("lex_glue", "scotus", split="train"),
+            ("text",),
+        ),
+    )
+
+    acronym_rows = select_acronym_rich_rows(real_rows, max_rows=90000)
+    eval_acronym_rows = acronym_rows[:5000]
+    train_acronym_rows = acronym_rows[5000:]
+    return train_rows + train_acronym_rows, eval_rows + eval_acronym_rows
+
+
+def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
+    rows = []
+    for row in dataset:
+        parts = []
+        for column in columns:
+            value = row.get(column)
+            if isinstance(value, str):
+                parts.append(value)
+        text = " ".join(parts)
+        if text:
+            rows.extend(chunk_text(text))
+    return rows
+
+
+def chunk_text(text: str, *, words_per_chunk: int = 96) -> list[str]:
+    words = text.replace("\n", " ").split()
+    return [
+        " ".join(words[index : index + words_per_chunk])
+        for index in range(0, len(words), words_per_chunk)
+        if len(words[index : index + words_per_chunk]) >= 12
+    ]
+
+
+def select_acronym_rich_rows(rows: list[str], *, max_rows: int) -> list[str]:
+    scored_rows = [
+        (acronym_score(row), index, row)
+        for index, row in enumerate(rows)
+        if acronym_score(row) > 0
+    ]
+    scored_rows.sort(key=lambda item: (-item[0], item[1]))
+    return [row for _, _, row in scored_rows[:max_rows]]
+
+
+def acronym_score(text: str) -> int:
+    score = 0
+    for word in text.split():
+        letters = [character for character in word if character.isalpha()]
+        if len(letters) < 2:
+            continue
+        if all(character.isupper() for character in letters):
+            score += 3 if len(letters) > 2 else 1
+        elif word[:1].isupper() and any(character.isupper() for character in word[1:]):
+            score += 1
+    return score
 
 
 def filter_text(dataset: Any, text_column: str) -> Any:

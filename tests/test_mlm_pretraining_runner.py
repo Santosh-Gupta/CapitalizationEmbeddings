@@ -109,7 +109,27 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(args.corpus, "capitalization_task_mix_augmented")
         self.assertEqual(args.capitalization_loss_weight, 0.5)
-        self.assertEqual(self.runner.parse_class_weights(args.capitalization_class_weights), [1.0, 2.0, 8.0])
+        self.assertEqual(
+            self.runner.parse_class_weights(args.capitalization_class_weights),
+            [1.0, 2.0, 8.0],
+        )
+
+    def test_parse_args_accepts_real_acronym_mix_corpus(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "capitalized",
+            "--corpus",
+            "capitalization_real_acronym_mix",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertEqual(args.corpus, "capitalization_real_acronym_mix")
 
     def test_augmented_task_mix_adds_case_variants(self):
         rows = ["tom met nasa in paris", "IBM hired alice"]
@@ -120,6 +140,30 @@ class MLMPretainingRunnerTests(unittest.TestCase):
         self.assertIn("Tom met nasa in paris", augmented)
         self.assertIn("TOM met nasa in paris", augmented)
         self.assertGreaterEqual(augmented.count("IBM hired alice"), 2)
+
+    def test_acronym_score_prefers_uppercase_terms(self):
+        self.assertGreater(
+            self.runner.acronym_score("NASA and FDA reviewed DNA data"),
+            self.runner.acronym_score("ordinary lowercase sentence"),
+        )
+
+    def test_select_acronym_rich_rows_keeps_highest_scoring_rows(self):
+        rows = [
+            "ordinary lowercase sentence",
+            "NASA FDA DNA RNA",
+            "The Court reviewed section text",
+        ]
+
+        selected = self.runner.select_acronym_rich_rows(rows, max_rows=1)
+
+        self.assertEqual(selected, ["NASA FDA DNA RNA"])
+
+    def test_chunk_text_splits_long_documents(self):
+        text = " ".join(f"WORD{i}" for i in range(36))
+
+        chunks = self.runner.chunk_text(text, words_per_chunk=12)
+
+        self.assertEqual(len(chunks), 3)
 
     def test_resolve_resume_checkpoint_prefers_explicit_checkpoint(self):
         args = type(
