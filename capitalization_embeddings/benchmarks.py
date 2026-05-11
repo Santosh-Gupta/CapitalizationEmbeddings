@@ -55,10 +55,10 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
     BenchmarkSpec(
         key="ontonotes5_ner",
         task_type="token_classification",
-        dataset_name="tner/ontonotes5",
+        dataset_name="extraordinarylab/ontonotes5",
         dataset_config=None,
         text_columns=("tokens",),
-        label_column="tags",
+        label_column="ner_tags",
         metric="seqeval_f1",
         priority=3,
         why_capitalization_matters=(

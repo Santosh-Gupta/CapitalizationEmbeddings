@@ -26,6 +26,12 @@ class BenchmarkRegistryTests(unittest.TestCase):
 
         self.assertEqual(spec.dataset_name, "flaitenberger/wnut_17")
 
+    def test_ontonotes_uses_script_free_dataset_mirror(self):
+        spec = get_benchmark("ontonotes5_ner")
+
+        self.assertEqual(spec.dataset_name, "extraordinarylab/ontonotes5")
+        self.assertEqual(spec.label_column, "ner_tags")
+
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]
 
