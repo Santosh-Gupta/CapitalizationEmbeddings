@@ -243,7 +243,8 @@ def label_names(raw: DatasetDict, dataset_name: str, label_column: str) -> list[
         return list(label_feature.names)
     labels = {
         label
-        for label_row in raw["train"][label_column]
+        for split in raw.values()
+        for label_row in split[label_column]
         for label in label_row
         if isinstance(label, str)
     }
