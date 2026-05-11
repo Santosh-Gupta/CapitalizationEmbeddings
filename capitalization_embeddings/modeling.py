@@ -32,12 +32,14 @@ class CapitalizedBertConfig(BertConfig):
         capitalization_vocab_size: int = 3,
         capitalization_pad_token_id: int = 0,
         capitalization_loss_weight: float = 0.25,
+        capitalization_class_weights: list[float] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.capitalization_vocab_size = capitalization_vocab_size
         self.capitalization_pad_token_id = capitalization_pad_token_id
         self.capitalization_loss_weight = capitalization_loss_weight
+        self.capitalization_class_weights = capitalization_class_weights
 
 
 class CapitalizedBertEmbeddings(nn.Module):
@@ -443,7 +445,17 @@ class CapitalizedBertForMaskedLM(BertPreTrainedModel):
             loss = token_loss
 
         if capitalization_labels is not None:
-            cap_loss_fct = CrossEntropyLoss(ignore_index=-100)
+            class_weights = None
+            if self.config.capitalization_class_weights is not None:
+                class_weights = torch.tensor(
+                    self.config.capitalization_class_weights,
+                    dtype=capitalization_scores.dtype,
+                    device=capitalization_scores.device,
+                )
+            cap_loss_fct = CrossEntropyLoss(
+                ignore_index=-100,
+                weight=class_weights,
+            )
             capitalization_loss = cap_loss_fct(
                 capitalization_scores.view(-1, self.config.capitalization_vocab_size),
                 capitalization_labels.view(-1),

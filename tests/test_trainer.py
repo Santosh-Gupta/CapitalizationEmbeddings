@@ -34,12 +34,15 @@ class TrainerMetricTests(unittest.TestCase):
 
         sums = trainer._capitalization_batch_sums(outputs, inputs)
 
-        self.assertEqual(tuple(sums.shape), (10,))
+        self.assertEqual(tuple(sums.shape), (19,))
         self.assertEqual(sums[2].item(), 3.0)
         self.assertEqual(sums[6].item(), 3.0)
         self.assertEqual(sums[7].item(), 1.0)
         self.assertEqual(sums[8].item(), 1.0)
         self.assertEqual(sums[9].item(), 1.0)
+        self.assertEqual(sums[10].item(), 1.0)
+        self.assertEqual(sums[14].item(), 1.0)
+        self.assertEqual(sums[18].item(), 1.0)
 
 
 if __name__ == "__main__":

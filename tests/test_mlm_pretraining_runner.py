@@ -88,6 +88,39 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(args.corpus, "capitalization_task_mix")
 
+    def test_parse_args_accepts_augmented_task_mix_and_class_weights(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "capitalized",
+            "--corpus",
+            "capitalization_task_mix_augmented",
+            "--capitalization-loss-weight",
+            "0.5",
+            "--capitalization-class-weights",
+            "1,2,8",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertEqual(args.corpus, "capitalization_task_mix_augmented")
+        self.assertEqual(args.capitalization_loss_weight, 0.5)
+        self.assertEqual(self.runner.parse_class_weights(args.capitalization_class_weights), [1.0, 2.0, 8.0])
+
+    def test_augmented_task_mix_adds_case_variants(self):
+        rows = ["tom met nasa in paris", "IBM hired alice"]
+
+        augmented = self.runner.augment_capitalization_rows(rows)
+
+        self.assertGreater(len(augmented), len(rows))
+        self.assertIn("Tom met nasa in paris", augmented)
+        self.assertIn("TOM met nasa in paris", augmented)
+        self.assertGreaterEqual(augmented.count("IBM hired alice"), 2)
+
     def test_resolve_resume_checkpoint_prefers_explicit_checkpoint(self):
         args = type(
             "Args",

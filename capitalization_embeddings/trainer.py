@@ -64,7 +64,7 @@ class CapitalizedMLMTrainer(Trainer):
         model = self._wrap_model(self.model, training=False, dataloader=dataloader)
         model.eval()
 
-        totals = torch.zeros(10, dtype=torch.float64, device=self.args.device)
+        totals = torch.zeros(19, dtype=torch.float64, device=self.args.device)
         batches = 0
 
         for inputs in dataloader:
@@ -81,7 +81,8 @@ class CapitalizedMLMTrainer(Trainer):
             return {}
 
         token_loss_sum, cap_loss_sum, correct, none_correct, first_correct = totals[:5]
-        all_correct, total, none_total, first_total, all_total = totals[5:]
+        all_correct, total, none_total, first_total, all_total = totals[5:10]
+        confusion = totals[10:].reshape(3, 3)
 
         def ratio(numerator: torch.Tensor, denominator: torch.Tensor) -> float:
             if denominator.item() == 0:
@@ -89,7 +90,7 @@ class CapitalizedMLMTrainer(Trainer):
             return float((numerator / denominator).item())
 
         prefix = metric_key_prefix
-        return {
+        metrics = {
             f"{prefix}_token_loss_unweighted": ratio(token_loss_sum, total),
             f"{prefix}_capitalization_loss_unweighted": ratio(cap_loss_sum, total),
             f"{prefix}_capitalization_accuracy": ratio(correct, total),
@@ -102,6 +103,13 @@ class CapitalizedMLMTrainer(Trainer):
             f"{prefix}_capitalization_all_caps_count": float(all_total.item()),
             f"{prefix}_capitalization_eval_batches": float(batches),
         }
+        labels = ("none", "first_cap", "all_caps")
+        for true_index, true_label in enumerate(labels):
+            for pred_index, pred_label in enumerate(labels):
+                metrics[
+                    f"{prefix}_capitalization_confusion_true_{true_label}_pred_{pred_label}"
+                ] = float(confusion[true_index, pred_index].item())
+        return metrics
 
     def _capitalization_batch_sums(
         self,
@@ -111,7 +119,7 @@ class CapitalizedMLMTrainer(Trainer):
         capitalization_labels = inputs.get("capitalization_labels")
         labels = inputs.get("labels")
         if capitalization_labels is None or outputs.capitalization_logits is None:
-            return torch.zeros(10, dtype=torch.float64, device=self.args.device)
+            return torch.zeros(19, dtype=torch.float64, device=self.args.device)
 
         mask = capitalization_labels != -100
         cap_logits = outputs.capitalization_logits
@@ -119,7 +127,7 @@ class CapitalizedMLMTrainer(Trainer):
 
         total = mask.sum().to(torch.float64)
         if total.item() == 0:
-            return torch.zeros(10, dtype=torch.float64, device=cap_logits.device)
+            return torch.zeros(19, dtype=torch.float64, device=cap_logits.device)
 
         cap_loss = torch.tensor(0.0, device=cap_logits.device)
         cap_loss = CrossEntropyLoss(ignore_index=-100, reduction="sum")(
@@ -137,6 +145,13 @@ class CapitalizedMLMTrainer(Trainer):
         none_mask = mask & (capitalization_labels == 0)
         first_mask = mask & (capitalization_labels == 1)
         all_mask = mask & (capitalization_labels == 2)
+        confusion_values = []
+        for true_index in range(3):
+            true_mask = mask & (capitalization_labels == true_index)
+            for pred_index in range(3):
+                confusion_values.append(
+                    (cap_preds[true_mask] == pred_index).sum().float(),
+                )
 
         values = [
             token_loss.detach().float(),
@@ -149,5 +164,6 @@ class CapitalizedMLMTrainer(Trainer):
             none_mask.sum().float(),
             first_mask.sum().float(),
             all_mask.sum().float(),
+            *confusion_values,
         ]
         return torch.stack(values).to(dtype=torch.float64)

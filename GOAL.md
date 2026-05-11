@@ -53,6 +53,20 @@ stable datasets on Hugging Face, and affordable fine-tuning time.
 
 ## Current Next Step
 
-Build a benchmark runner that writes a single comparison table for CoNLL-2003
-NER, then extend that runner to the benchmark registry after the first full
-RunPod run completes.
+The current bottleneck is all-caps learning. The task-mix checkpoint reached
+strong first-cap accuracy but weak all-caps accuracy, so the next experiment is:
+
+1. Add explicit all-caps diagnostics: per-class counts, accuracies, and a
+   capitalization confusion matrix.
+2. Pretrain on an augmented task mix that oversamples all-caps examples and
+   injects deterministic first-cap/all-caps variants.
+3. Use class-weighted capitalization loss, with all-caps weighted above
+   first-cap and no-cap.
+4. Run longer capitalized pretraining from the current task-mix checkpoint, then
+   evaluate the checkpoint ladder on CoNLL-2003 and OntoNotes first.
+5. After finding a better capitalized recipe, rerun matched uncased and cased
+   controls with the same corpus/budget.
+
+The immediate target is to raise all-caps capitalization accuracy materially
+above the current `0.468` range without hurting token MLM loss enough to damage
+downstream fine-tuning.

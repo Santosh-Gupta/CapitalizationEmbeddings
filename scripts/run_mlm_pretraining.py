@@ -24,6 +24,7 @@ CORPUS_CHOICES = (
     "ontonotes5_train",
     "ptb_pos_train",
     "capitalization_task_mix",
+    "capitalization_task_mix_augmented",
 )
 
 
@@ -51,6 +52,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=5e-5)
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--warmup-ratio", type=float, default=0.06)
+    parser.add_argument(
+        "--capitalization-loss-weight",
+        type=float,
+        default=0.25,
+        help="Scalar multiplier for the auxiliary capitalization loss.",
+    )
+    parser.add_argument(
+        "--capitalization-class-weights",
+        default="",
+        help=(
+            "Optional comma-separated class weights for none,first-cap,all-caps "
+            "capitalization labels. Example: 1,2,8."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--max-train-samples", type=int, default=0)
     parser.add_argument("--max-eval-samples", type=int, default=0)
@@ -86,7 +101,7 @@ def main() -> None:
     resume_checkpoint = resolve_resume_checkpoint(output_root, args)
 
     model_spec = MODEL_SPECS[args.model_kind]
-    tokenizer, model = load_model_and_tokenizer(args.model_kind, args.initial_checkpoint)
+    tokenizer, model = load_model_and_tokenizer(args.model_kind, args.initial_checkpoint, args)
     tokenized_train, tokenized_eval = load_and_tokenize_corpus(args, tokenizer)
     data_collator = make_data_collator(args, tokenizer, model_spec["kind"])
     trainer_cls = trainer_class(model_spec["kind"])
@@ -142,12 +157,21 @@ def main() -> None:
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
         "train_loss": train_result.training_loss,
     }
+    if args.model_kind == "capitalized":
+        row["capitalization_loss_weight"] = float(args.capitalization_loss_weight)
+        row["capitalization_class_weights"] = parse_class_weights(
+            args.capitalization_class_weights,
+        )
     row.update(flatten_metrics(eval_metrics))
     write_json(output_root / "pretraining_metrics.json", row)
     print(json.dumps(row, indent=2, sort_keys=True))
 
 
-def load_model_and_tokenizer(model_kind: str, initial_checkpoint: str = "") -> tuple[Any, Any]:
+def load_model_and_tokenizer(
+    model_kind: str,
+    initial_checkpoint: str = "",
+    args: argparse.Namespace | None = None,
+) -> tuple[Any, Any]:
     from transformers import AutoModelForMaskedLM, AutoTokenizer
 
     from capitalization_embeddings import CapitalizedBertConfig, CapitalizedBertForMaskedLM
@@ -156,14 +180,21 @@ def load_model_and_tokenizer(model_kind: str, initial_checkpoint: str = "") -> t
     tokenizer_name = initial_checkpoint or model_spec["model_name"]
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, use_fast=True)
     if model_spec["kind"] == "capitalized":
+        config_overrides = capitalization_config_overrides(args)
         if initial_checkpoint:
-            config = CapitalizedBertConfig.from_pretrained(initial_checkpoint)
+            config = CapitalizedBertConfig.from_pretrained(
+                initial_checkpoint,
+                **config_overrides,
+            )
             model = CapitalizedBertForMaskedLM.from_pretrained(
                 initial_checkpoint,
                 config=config,
             )
         else:
-            model = CapitalizedBertForMaskedLM.from_uncased_pretrained(model_spec["model_name"])
+            model = CapitalizedBertForMaskedLM.from_uncased_pretrained(
+                model_spec["model_name"],
+                config_kwargs=config_overrides,
+            )
     else:
         model = AutoModelForMaskedLM.from_pretrained(initial_checkpoint or model_spec["model_name"])
     return tokenizer, model
@@ -240,7 +271,7 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
         raw = load_dataset("batterydata/pos_tagging")
         return token_rows(raw, "words", eval_split="test")
 
-    if corpus == "capitalization_task_mix":
+    if corpus in {"capitalization_task_mix", "capitalization_task_mix_augmented"}:
         train_rows = []
         eval_rows = []
         for dataset, token_column, eval_split in (
@@ -256,6 +287,8 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
             )
             train_rows.extend(train["text"])
             eval_rows.extend(eval_dataset["text"])
+        if corpus == "capitalization_task_mix_augmented":
+            train_rows = augment_capitalization_rows(train_rows)
         return (
             Dataset.from_dict({"text": train_rows}),
             Dataset.from_dict({"text": eval_rows}),
@@ -345,6 +378,77 @@ def flatten_metrics(metrics: dict[str, Any]) -> dict[str, float]:
 def write_json(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(row, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def capitalization_config_overrides(args: argparse.Namespace | None) -> dict[str, Any]:
+    if args is None:
+        return {}
+    return {
+        "capitalization_loss_weight": args.capitalization_loss_weight,
+        "capitalization_class_weights": parse_class_weights(
+            args.capitalization_class_weights,
+        ),
+    }
+
+
+def parse_class_weights(value: str) -> list[float] | None:
+    if not value:
+        return None
+    weights = [float(part.strip()) for part in value.split(",") if part.strip()]
+    if len(weights) != 3:
+        raise ValueError(
+            "--capitalization-class-weights must contain exactly three values: "
+            "none,first-cap,all-caps."
+        )
+    return weights
+
+
+def augment_capitalization_rows(rows: list[str]) -> list[str]:
+    """Add deterministic case-balanced variants for capitalization pretraining."""
+
+    augmented = list(rows)
+    for row in rows:
+        words = row.split()
+        if not words:
+            continue
+
+        if contains_all_caps(words):
+            augmented.extend([row, row])
+
+        first_cap_variant = transform_case_words(words, mode="first")
+        all_caps_variant = transform_case_words(words, mode="all")
+        if first_cap_variant != row:
+            augmented.append(first_cap_variant)
+        if all_caps_variant != row:
+            augmented.append(all_caps_variant)
+            augmented.append(all_caps_variant)
+    return augmented
+
+
+def contains_all_caps(words: list[str]) -> bool:
+    return any(is_case_word(word) and word.upper() == word and len(word) > 1 for word in words)
+
+
+def transform_case_words(words: list[str], *, mode: str) -> str:
+    transformed = []
+    eligible_index = 0
+    for word in words:
+        if is_case_word(word):
+            if mode == "first" and eligible_index % 5 == 0:
+                transformed.append(word[:1].upper() + word[1:].lower())
+            elif mode == "all" and eligible_index % 7 == 0:
+                transformed.append(word.upper())
+            else:
+                transformed.append(word)
+            eligible_index += 1
+        else:
+            transformed.append(word)
+    return " ".join(transformed)
+
+
+def is_case_word(word: str) -> bool:
+    letters = [character for character in word if character.isalpha()]
+    return len(letters) >= 2
 
 
 if __name__ == "__main__":
