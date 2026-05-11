@@ -421,3 +421,31 @@ performance does not improve. The current evidence suggests that directly
 optimizing auxiliary capitalization accuracy is not sufficient; the next data
 direction should be real acronym-heavy corpora rather than synthetic case
 variants or heavier capitalization loss.
+
+## Real Acronym Corpus Follow-Up
+
+Run date: 2026-05-11
+
+Added `capitalization_real_acronym_mix`, a natural-text corpus that extends the
+task mix with acronym-heavy rows from:
+
+```text
+ccdv/pubmed-summarization: biomedical abstracts/articles
+billsum: government/legal bill text
+lex_glue/scotus: legal opinions
+```
+
+Rows are chunked and filtered/ranked by uppercase acronym signal instead of
+synthetically changing word case. The first run keeps the standard
+capitalization objective:
+
+```text
+corpus: capitalization_real_acronym_mix
+max_steps: 10000
+capitalization_loss_weight: 0.25
+capitalization_class_weights: none
+checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/capitalized_from_task_mix_steps10000/final
+```
+
+Hypothesis: real acronym-heavy text should improve all-caps behavior without the
+OntoNotes regression caused by synthetic capitalization augmentation.
