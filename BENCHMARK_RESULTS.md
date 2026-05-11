@@ -362,6 +362,28 @@ OntoNotes worsened, suggesting the all-caps weighting overcorrected and hurt bro
 case behavior.
 ```
 
-Next run: use the same augmented corpus with softer capitalization weighting
-(`capitalization_loss_weight=0.35`, class weights `[1.0, 1.5, 4.0]`) to preserve
-more first-cap/no-cap behavior while still lifting all-caps accuracy.
+Follow-up run: same augmented corpus with softer capitalization weighting
+(`capitalization_loss_weight=0.35`, class weights `[1.0, 1.5, 4.0]`).
+
+Capitalization diagnostics:
+
+| Metric | Soft augmented weighted checkpoint |
+| --- | ---: |
+| capitalization accuracy | 0.924149 |
+| none accuracy | 0.951953 |
+| first-cap accuracy | 0.826235 |
+| all-caps accuracy | 0.876344 |
+| eval token loss | 2.133818 |
+
+Downstream check:
+
+| Benchmark | Soft augmented weighted capitalized |
+| --- | ---: |
+| CoNLL-2003 NER F1 | 0.915094 |
+| OntoNotes v5 NER F1 | 0.886473 |
+
+Softening the weights recovered some no-cap accuracy but did not recover
+OntoNotes, and it gave up most of the aggressive run's CoNLL gain. The next
+hypothesis is that synthetic capitalization augmentation is causing distribution
+shift. The next run should use the natural task-mix corpus with weighted
+capitalization loss but without synthetic case variants.
