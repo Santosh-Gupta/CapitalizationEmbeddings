@@ -77,6 +77,20 @@ class SequenceBenchmarkRunnerTests(unittest.TestCase):
                 args,
             )
 
+    def test_hidden_regression_test_labels_use_validation_split(self):
+        raw = {
+            "validation": {"label": [1.0, 2.0]},
+            "test": {"label": [-1.0, -1.0]},
+        }
+
+        split = self.runner.labeled_evaluation_split(
+            raw,
+            "label",
+            regression=True,
+        )
+
+        self.assertEqual(split, "validation")
+
     def test_jsonl_and_csv_writers_create_scoreboard_files(self):
         row = {
             "benchmark": "tweet_eval_irony",

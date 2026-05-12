@@ -297,7 +297,8 @@ def run_one_model(
     )
 
     train_result = trainer.train()
-    test_metrics = trainer.evaluate(tokenized["test"], metric_key_prefix="test")
+    eval_split = labeled_evaluation_split(raw, spec.label_column, regression=is_regression)
+    test_metrics = trainer.evaluate(tokenized[eval_split], metric_key_prefix="test")
     trainer.save_model(str(output_dir / "final"))
     tokenizer.save_pretrained(str(output_dir / "final"))
 
@@ -307,9 +308,23 @@ def run_one_model(
         "pretraining_checkpoint": checkpoint,
         "output_dir": str(output_dir),
         "train_loss": train_result.training_loss,
+        "evaluation_split": eval_split,
     }
     row.update(flatten_metrics(test_metrics))
     return row
+
+
+def labeled_evaluation_split(raw, label_column: str, *, regression: bool) -> str:
+    if "test" not in raw:
+        return "validation"
+    labels = raw["test"][label_column]
+    if not labels:
+        return "validation"
+    if regression and all(float(label) < 0 for label in labels):
+        return "validation"
+    if not regression and all(int(label) < 0 for label in labels):
+        return "validation"
+    return "test"
 
 
 def checkpoint_for_model(
