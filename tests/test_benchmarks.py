@@ -40,6 +40,7 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertEqual(spec.task_type, "sequence_classification")
         self.assertEqual(spec.dataset_name, "tweet_eval")
         self.assertEqual(spec.dataset_config, "irony")
+        self.assertEqual(spec.metric, "macro_f1")
 
         stsb = get_benchmark("stsb")
         self.assertEqual(stsb.task_type, "sequence_regression")

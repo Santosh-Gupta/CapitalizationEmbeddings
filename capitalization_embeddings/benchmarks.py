@@ -104,7 +104,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         dataset_config="irony",
         text_columns=("text",),
         label_column="label",
-        metric="accuracy",
+        metric="macro_f1",
         priority=10,
         why_capitalization_matters=(
             "Noisy social text where casing can be expressive or inconsistent; "
@@ -119,7 +119,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         dataset_config="sentiment",
         text_columns=("text",),
         label_column="label",
-        metric="accuracy",
+        metric="macro_f1",
         priority=11,
         why_capitalization_matters=(
             "Social sentiment classification where lexical unification may matter "
@@ -134,7 +134,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         dataset_config="offensive",
         text_columns=("text",),
         label_column="label",
-        metric="accuracy",
+        metric="macro_f1",
         priority=12,
         why_capitalization_matters=(
             "Noisy social classification with inconsistent casing."
@@ -148,7 +148,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         dataset_config="emotion",
         text_columns=("text",),
         label_column="label",
-        metric="accuracy",
+        metric="macro_f1",
         priority=13,
         why_capitalization_matters=(
             "Noisy emotion classification where uncased baselines can be stronger."
