@@ -449,3 +449,92 @@ checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mi
 
 Hypothesis: real acronym-heavy text should improve all-caps behavior without the
 OntoNotes regression caused by synthetic capitalization augmentation.
+
+### 10k-Step Result
+
+The 10k real-acronym continuation improved the auxiliary capitalization channel
+substantially, especially all-caps recognition, but it still over-adapted for
+broad NER.
+
+```text
+eval_capitalization_accuracy: 0.944736
+eval_capitalization_none_accuracy: 0.973789
+eval_capitalization_first_cap_accuracy: 0.868936
+eval_capitalization_all_caps_accuracy: 0.711957
+eval_capitalization_all_caps_count: 184
+```
+
+| Benchmark | F1 | Precision | Recall | Accuracy |
+| --- | ---: | ---: | ---: | ---: |
+| CoNLL-2003 NER | 0.915201 | 0.909441 | 0.921034 | 0.982513 |
+| OntoNotes v5 NER | 0.883764 | 0.879065 | 0.888514 | 0.980985 |
+
+Compared with the previous task-mix checkpoint, CoNLL moved up from `0.914753`
+to `0.915201`, while OntoNotes fell from `0.888986` to `0.883764`. This suggests
+the corpus direction is useful for all-caps learning, but 10k steps at `5e-5`
+is too much continuation from the stronger task-mix checkpoint.
+
+Follow-up started:
+
+```text
+corpus: capitalization_real_acronym_mix
+max_steps: 3000
+learning_rate: 2e-5
+capitalization_loss_weight: 0.25
+checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/capitalized_from_task_mix_steps3000_lr2e5/final
+```
+
+The 3k/lower-LR run completed with a smaller capitalization shift:
+
+```text
+eval_capitalization_accuracy: 0.936093
+eval_capitalization_none_accuracy: 0.975703
+eval_capitalization_first_cap_accuracy: 0.851754
+eval_capitalization_all_caps_accuracy: 0.513228
+eval_capitalization_all_caps_count: 189
+```
+
+This is a modest all-caps improvement over the task-mix checkpoint, not the
+large correction seen in the 10k run.
+
+| Benchmark | F1 | Precision | Recall | Accuracy |
+| --- | ---: | ---: | ---: | ---: |
+| CoNLL-2003 NER | 0.915129 | 0.908266 | 0.922096 | 0.982987 |
+| OntoNotes v5 NER | 0.888013 | 0.876113 | 0.900240 | 0.981738 |
+| WNUT-17 NER | 0.485396 | 0.568408 | 0.423540 | 0.950451 |
+| PTB POS | n/a | n/a | n/a | 0.977269 |
+
+Compared with the task-mix checkpoint, CoNLL improved from `0.914753` to
+`0.915129`, while OntoNotes moved from `0.888986` to `0.888013`. The gentler
+continuation preserved most of the broad NER signal but did not improve it. The
+largest gain was WNUT-17, where F1 improved from `0.448841` to `0.485396`.
+PTB POS also moved slightly from `0.977084` to `0.977269`.
+
+Matched cased/uncased real-acronym continuation is the next control. This will
+test whether the WNUT gain comes from the capitalization architecture or from
+extra acronym-heavy MLM exposure alone.
+
+Matched-control pretraining completed:
+
+```text
+uncased checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_from_task_mix_steps3000_lr2e5/final
+uncased eval_loss: 1.938038
+cased checkpoint: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_from_task_mix_steps3000_lr2e5/final
+cased eval_loss: 1.912665
+```
+
+Four-task downstream evaluation completed for `uncased_pretrained` and
+`cased_pretrained`.
+
+| Benchmark | Metric | Capitalized | Matched uncased | Matched cased |
+| --- | --- | ---: | ---: | ---: |
+| CoNLL-2003 NER | F1 | 0.915129 | 0.903963 | 0.914085 |
+| WNUT-17 NER | F1 | 0.485396 | 0.449095 | 0.461375 |
+| OntoNotes v5 NER | F1 | 0.888013 | 0.873388 | 0.889647 |
+| PTB POS | Accuracy | 0.977269 | 0.973634 | 0.977453 |
+
+The CoNLL and WNUT gains survive the matched extra-MLM control. WNUT is the
+clearest architecture-positive result so far: the capitalization-embedding model
+beats both cased and uncased models after all three receive the same
+real-acronym continuation. OntoNotes and PTB still favor matched cased by small
+margins, but the capitalized model remains well above matched uncased.
