@@ -631,10 +631,22 @@ def tokenize_examples(
         tokenized["labels"] = [float(label) for label in examples[label_column]]
     else:
         tokenized["labels"] = [
-            label_to_id[str(label)] if label_to_id is not None else int(label)
+            classification_label_id(label, label_to_id)
             for label in examples[label_column]
         ]
     return tokenized
+
+
+def classification_label_id(label: Any, label_to_id: dict[str, int] | None) -> int:
+    if label_to_id is None:
+        return int(label)
+    label_text = str(label)
+    if label_text in label_to_id:
+        return label_to_id[label_text]
+    label_id = int(label)
+    if 0 <= label_id < len(label_to_id):
+        return label_id
+    raise KeyError(f"Unknown label {label!r}.")
 
 
 def merge_text_columns(

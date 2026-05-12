@@ -99,6 +99,26 @@ class SequenceBenchmarkRunnerTests(unittest.TestCase):
 
         self.assertEqual(tokenized["labels"], [1, 0])
 
+    def test_tokenize_examples_accepts_classlabel_integer_ids(self):
+        class FakeTokenizer:
+            sep_token = "[SEP]"
+
+            def __call__(self, texts, truncation, max_length):
+                return {"input_ids": [[1, 2] for _ in texts]}
+
+        tokenized = self.runner.tokenize_examples(
+            examples={"text": ["a", "b"], "label": [1, 0]},
+            tokenizer=FakeTokenizer(),
+            text_columns=("text",),
+            label_column="label",
+            label_to_id={"negative": 0, "positive": 1},
+            max_length=16,
+            capitalized=False,
+            regression=False,
+        )
+
+        self.assertEqual(tokenized["labels"], [1, 0])
+
     def test_checkpoint_for_model_requires_expected_cli_arg(self):
         args = type(
             "Args",
