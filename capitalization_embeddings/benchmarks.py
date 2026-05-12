@@ -19,6 +19,7 @@ class BenchmarkSpec:
     priority: int
     why_capitalization_matters: str
     status: str = "candidate"
+    processor: str | None = None
 
 
 BENCHMARKS: tuple[BenchmarkSpec, ...] = (
@@ -210,6 +211,55 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
             "Noisy web topic classification where uncased BERT can have an edge."
         ),
         status="implemented",
+    ),
+    BenchmarkSpec(
+        key="semeval2018_task7",
+        task_type="sequence_classification",
+        dataset_name="DFKI-SLT/SemEval2018_Task7",
+        dataset_config="Subtask_1_1",
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=18,
+        why_capitalization_matters=(
+            "Scientific relation classification where uncased baselines can be "
+            "strong; entity and acronym casing should be preserved without "
+            "fragmenting lexical evidence."
+        ),
+        status="implemented",
+        processor="semeval2018_task7_relations",
+    ),
+    BenchmarkSpec(
+        key="scierc_relations",
+        task_type="sequence_classification",
+        dataset_name="nsusemiehl/SciERC",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=19,
+        why_capitalization_matters=(
+            "Scientific relation classification with marked entity spans; useful "
+            "for testing whether capitalization embeddings retain uncased-style "
+            "lexical sharing in technical text."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="scientific_relations_combined",
+        task_type="sequence_classification",
+        dataset_name="combined:semeval2018_task7+scierc",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=20,
+        why_capitalization_matters=(
+            "Combined scientific relation classification benchmark, matching the "
+            "reported setting where uncased BERT can outperform cased BERT."
+        ),
+        status="implemented",
+        processor="combined_scientific_relations",
     ),
 )
 

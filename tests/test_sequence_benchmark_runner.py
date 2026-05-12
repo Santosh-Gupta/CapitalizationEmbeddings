@@ -52,6 +52,45 @@ class SequenceBenchmarkRunnerTests(unittest.TestCase):
 
         self.assertEqual(merged, ["Title [SEP] Body [SEP] Answer"])
 
+    def test_semeval_relation_examples_flatten_relation_rows(self):
+        rows = self.runner.semeval2018_relation_examples(
+            {
+                "title": "Scientific title",
+                "abstract": "The CNN model uses ImageNet features.",
+                "entities": [
+                    {"id": "T1", "char_start": 4, "char_end": 7},
+                    {"id": "T2", "char_start": 19, "char_end": 27},
+                ],
+                "relations": [
+                    {"entity_1": "T1", "entity_2": "T2", "relation": "USAGE"},
+                ],
+            }
+        )
+
+        self.assertEqual(rows[0]["label"], "USAGE")
+        self.assertIn("[E1] CNN [/E1]", rows[0]["text"])
+        self.assertIn("[E2] ImageNet [/E2]", rows[0]["text"])
+
+    def test_tokenize_examples_maps_string_labels(self):
+        class FakeTokenizer:
+            sep_token = "[SEP]"
+
+            def __call__(self, texts, truncation, max_length):
+                return {"input_ids": [[1, 2] for _ in texts]}
+
+        tokenized = self.runner.tokenize_examples(
+            examples={"text": ["a", "b"], "label": ["USAGE", "PART_OF"]},
+            tokenizer=FakeTokenizer(),
+            text_columns=("text",),
+            label_column="label",
+            label_to_id={"PART_OF": 0, "USAGE": 1},
+            max_length=16,
+            capitalized=False,
+            regression=False,
+        )
+
+        self.assertEqual(tokenized["labels"], [1, 0])
+
     def test_checkpoint_for_model_requires_expected_cli_arg(self):
         args = type(
             "Args",

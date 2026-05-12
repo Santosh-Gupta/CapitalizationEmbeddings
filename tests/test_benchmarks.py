@@ -46,6 +46,17 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertEqual(stsb.task_type, "sequence_regression")
         self.assertEqual(stsb.text_columns, ("sentence1", "sentence2"))
 
+    def test_scientific_relation_benchmarks_are_registered(self):
+        semeval = get_benchmark("semeval2018_task7")
+
+        self.assertEqual(semeval.dataset_name, "DFKI-SLT/SemEval2018_Task7")
+        self.assertEqual(semeval.dataset_config, "Subtask_1_1")
+        self.assertEqual(semeval.processor, "semeval2018_task7_relations")
+
+        combined = get_benchmark("scientific_relations_combined")
+        self.assertEqual(combined.processor, "combined_scientific_relations")
+        self.assertEqual(combined.metric, "accuracy")
+
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]
 

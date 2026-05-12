@@ -95,7 +95,7 @@ def main() -> None:
     results_file = Path(args.results_file or output_root / "sequence_results.jsonl")
     csv_file = results_file.with_suffix(".csv")
 
-    raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
+    raw = load_prepared_benchmark_dataset(spec, seed=args.seed)
     raw = ensure_validation_split(raw, seed=args.seed)
     raw = maybe_select_samples(
         raw,
@@ -104,6 +104,7 @@ def main() -> None:
         max_test_samples=args.max_test_samples,
     )
     labels = labels_for_dataset(raw, spec.label_column, regression=spec.task_type == "sequence_regression")
+    label_to_id = None if labels is None else {label: index for index, label in enumerate(labels)}
 
     print(f"benchmark: {args.benchmark}")
     print(f"output_root: {output_root}")
@@ -117,6 +118,7 @@ def main() -> None:
             args=args,
             raw=raw,
             labels=labels,
+            label_to_id=label_to_id,
             output_root=output_root,
         )
         row.update(
@@ -144,6 +146,116 @@ def load_benchmark_dataset(dataset_name: str, dataset_config: str | None):
     if dataset_config:
         return load_dataset(dataset_name, dataset_config)
     return load_dataset(dataset_name)
+
+
+def load_prepared_benchmark_dataset(spec: Any, *, seed: int):
+    if spec.processor == "combined_scientific_relations":
+        return load_combined_scientific_relations(seed=seed)
+
+    raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
+    if spec.processor == "semeval2018_task7_relations":
+        return prepare_semeval2018_task7(raw)
+    return raw
+
+
+def prepare_semeval2018_task7(raw):
+    from datasets import Dataset, DatasetDict
+
+    prepared = {}
+    for split, dataset in raw.items():
+        rows = []
+        for example in dataset:
+            rows.extend(semeval2018_relation_examples(example))
+        prepared[split] = Dataset.from_list(rows)
+    return DatasetDict(prepared)
+
+
+def semeval2018_relation_examples(example: dict[str, Any]) -> list[dict[str, Any]]:
+    abstract = example.get("abstract") or example.get("text") or ""
+    text = abstract
+    title = example.get("title")
+    if title:
+        text = f"{title} [SEP] {abstract}"
+
+    entities = {
+        entity["id"]: entity_text_from_offsets(abstract, entity)
+        for entity in example.get("entities", [])
+        if isinstance(entity, dict) and entity.get("id")
+    }
+
+    relations = example.get("relations") or []
+    rows = []
+    for relation in relations:
+        label = relation.get("relation")
+        if label is None:
+            label = relation.get("label")
+        if label is None:
+            continue
+        marked_text = mark_relation_text(
+            text,
+            resolve_relation_entity(entities, relation.get("entity_1") or relation.get("e1") or relation.get("arg1")),
+            resolve_relation_entity(entities, relation.get("entity_2") or relation.get("e2") or relation.get("arg2")),
+        )
+        rows.append({"text": marked_text, "label": str(label)})
+    return rows
+
+
+def entity_text_from_offsets(text: str, entity: dict[str, Any]) -> str:
+    start = entity.get("char_start")
+    end = entity.get("char_end")
+    if isinstance(start, int) and isinstance(end, int) and 0 <= start < end <= len(text):
+        return text[start:end]
+    return entity_text(entity)
+
+
+def resolve_relation_entity(entities: dict[str, str], reference: Any) -> str:
+    if isinstance(reference, str) and reference in entities:
+        return entities[reference]
+    return entity_text(reference)
+
+
+def mark_relation_text(text: str, entity_1: Any, entity_2: Any) -> str:
+    entity_1_text = entity_text(entity_1)
+    entity_2_text = entity_text(entity_2)
+    if entity_1_text and entity_2_text:
+        return f"[E1] {entity_1_text} [/E1] [E2] {entity_2_text} [/E2] {text}"
+    return text
+
+
+def entity_text(entity: Any) -> str:
+    if isinstance(entity, str):
+        return entity
+    if isinstance(entity, dict):
+        for key in ("text", "term", "surface", "entity", "mention"):
+            value = entity.get(key)
+            if value:
+                return str(value)
+    return ""
+
+
+def load_combined_scientific_relations(*, seed: int):
+    from datasets import DatasetDict, concatenate_datasets, load_dataset
+
+    semeval = prepare_semeval2018_task7(load_dataset("DFKI-SLT/SemEval2018_Task7", "Subtask_1_1"))
+    scierc = load_dataset("nsusemiehl/SciERC")
+    scierc = DatasetDict(
+        {
+            split: dataset.select_columns(["text", "label"]).map(
+                lambda examples: {"label": [str(label) for label in examples["label"]]},
+                batched=True,
+            )
+            for split, dataset in scierc.items()
+        }
+    )
+
+    semeval = ensure_validation_split(semeval, seed=seed)
+    scierc = ensure_validation_split(scierc, seed=seed)
+    splits = {}
+    for split in ("train", "validation", "test"):
+        datasets = [dataset[split] for dataset in (semeval, scierc) if split in dataset]
+        if datasets:
+            splits[split] = concatenate_datasets(datasets).shuffle(seed=seed)
+    return DatasetDict(splits)
 
 
 def ensure_validation_split(raw, seed: int):
@@ -199,6 +311,7 @@ def run_one_model(
     args: argparse.Namespace,
     raw,
     labels: list[str] | None,
+    label_to_id: dict[str, int] | None,
     output_root: Path,
 ) -> dict[str, Any]:
     import torch
@@ -231,6 +344,7 @@ def run_one_model(
             tokenizer=tokenizer,
             text_columns=spec.text_columns,
             label_column=spec.label_column,
+            label_to_id=label_to_id,
             max_length=args.max_length,
             capitalized=is_capitalized,
             regression=is_regression,
@@ -410,6 +524,7 @@ def tokenize_examples(
     tokenizer: Any,
     text_columns: tuple[str, ...],
     label_column: str,
+    label_to_id: dict[str, int] | None,
     max_length: int,
     capitalized: bool,
     regression: bool,
@@ -430,10 +545,13 @@ def tokenize_examples(
             truncation=True,
             max_length=max_length,
         )
-    tokenized["labels"] = [
-        float(label) if regression else int(label)
-        for label in examples[label_column]
-    ]
+    if regression:
+        tokenized["labels"] = [float(label) for label in examples[label_column]]
+    else:
+        tokenized["labels"] = [
+            label_to_id[str(label)] if label_to_id is not None else int(label)
+            for label in examples[label_column]
+        ]
     return tokenized
 
 
