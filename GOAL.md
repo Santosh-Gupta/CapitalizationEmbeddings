@@ -1,72 +1,91 @@
 # Project Goal
 
-Primary goal: get `capitalized-bert-base-uncased` to beat `bert-base-uncased`
-on at least one capitalization-sensitive benchmark.
+Build a paper-grade proof that capitalization embeddings preserve the main
+advantage of uncased BERT while recovering most of the advantage of cased BERT
+when capitalization matters.
 
-Stretch goal: get the capitalization-embedding model within range of, or better
-than, `bert-base-cased` on the same benchmark. Further stretch: repeat the result
-across multiple capitalization-sensitive benchmarks.
+## Main Claim
 
-## Scoreboard Criteria
-
-Every benchmark run should compare the same downstream training settings across:
+The target claim is no longer simply "beat cased BERT everywhere." The stronger
+and more defensible claim is:
 
 ```text
-bert-base-uncased
-bert-base-cased
-capitalized-bert-base-uncased initialized from bert-base-uncased
-capitalized-bert-base-uncased after continued MLM pretraining
+Capitalization embeddings keep lexical sharing through an uncased vocabulary,
+while adding a small case channel that downstream models can use when case is
+predictive and ignore when case is noisy.
 ```
 
-The main success criterion is downstream validation/test performance, not MLM
-loss by itself. Continued pretraining should still log token MLM loss,
-capitalization loss, and first-cap/all-caps accuracy so bad checkpoints can be
-filtered before expensive fine-tuning.
+This predicts two benchmark families:
 
-## Benchmark Discovery
+1. Cased-favored tasks: capitalized should beat matched uncased and match or beat
+   matched cased.
+2. Uncased-favored tasks: capitalized should match or beat matched uncased and
+   outperform matched cased, or at least avoid the cased penalty.
 
-The best proof-of-concept benchmarks are the ones where `bert-base-cased` has a
-clear advantage over `bert-base-uncased`. The initial candidate registry lives in
-`capitalization_embeddings/benchmarks.py`.
+## Current Best Method
 
-Initial priority:
+Use the real-acronym 3k/lr2e-5 continued-pretraining recipe as the main
+checkpoint family:
 
-1. `conll2003_ner`: first implemented target; clean newswire named entities.
-2. `wnut17_ner`: noisy social-media entities, useful for generalization.
-3. `ontonotes5_ner`: broader multi-genre NER if the HF dataset path and labels
-   are stable enough for automated runs.
-4. `conll2003_pos`: cheap auxiliary check for proper-noun tagging.
+```text
+corpus: capitalization_real_acronym_mix
+max_steps: 3000
+learning_rate: 2e-5
+capitalization_loss_weight: 0.25
+```
 
-Before spending major GPU time, run cased-vs-uncased baselines on candidate
-tasks and rank by absolute metric gap. Prefer tasks with a large cased advantage,
-stable datasets on Hugging Face, and affordable fine-tuning time.
+Matched controls must receive the same extra MLM recipe:
 
-## Iteration Loop
+```text
+capitalized: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/capitalized_from_task_mix_steps3000_lr2e5/final
+uncased:     /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_from_task_mix_steps3000_lr2e5/final
+cased:       /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_from_task_mix_steps3000_lr2e5/final
+```
 
-1. Establish matched baselines for cased, uncased, and the capitalization model.
-2. Continue-pretrain the capitalization model on capitalization-rich text.
-3. Fine-tune all checkpoints with identical downstream settings.
-4. Append metrics to a persistent results table.
-5. Iterate on capitalization loss weight, base embedding freezing, capitalization
-   dropout/noise, and whether the capitalization prediction head is pretraining
-   only.
+## Current Evidence
 
-## Current Next Step
+Single-seed discovery results are encouraging but not paper-grade.
 
-The current bottleneck is all-caps learning. The task-mix checkpoint reached
-strong first-cap accuracy but weak all-caps accuracy, so the next experiment is:
+Cased-favored tasks:
 
-1. Add explicit all-caps diagnostics: per-class counts, accuracies, and a
-   capitalization confusion matrix.
-2. Pretrain on an augmented task mix that oversamples all-caps examples and
-   injects deterministic first-cap/all-caps variants.
-3. Use class-weighted capitalization loss, with all-caps weighted above
-   first-cap and no-cap.
-4. Run longer capitalized pretraining from the current task-mix checkpoint, then
-   evaluate the checkpoint ladder on CoNLL-2003 and OntoNotes first.
-5. After finding a better capitalized recipe, rerun matched uncased and cased
-   controls with the same corpus/budget.
+- CoNLL-2003 NER: capitalized beats matched cased and uncased.
+- WNUT-17 NER: capitalized beats matched cased and uncased.
+- OntoNotes v5 NER: capitalized beats matched uncased and nearly matches cased.
+- PTB POS: capitalized beats matched uncased and nearly matches cased.
 
-The immediate target is to raise all-caps capitalization accuracy materially
-above the current `0.468` range without hurting token MLM loss enough to damage
-downstream fine-tuning.
+Uncased-favored tasks:
+
+- Capitalized beats both matched controls on TweetEval Irony, SST-5,
+  20 Newsgroups, TweetEval Sentiment, and TweetEval Offensive.
+- TweetEval Emotion is currently a miss against matched uncased.
+- STS-B needs validation-split rerun because GLUE test labels are hidden.
+- Yahoo Answers is pending because full fine-tuning is much larger than the
+  other sequence tasks.
+
+## Paper-Grade Completion Criteria
+
+For every headline benchmark:
+
+1. Run at least 5 fine-tuning seeds for each model family.
+2. Save per-example predictions for every model/seed.
+3. Report mean and standard deviation across seeds.
+4. Run paired bootstrap tests on identical examples.
+5. Apply Holm-Bonferroni correction within benchmark families.
+
+Target final headline benchmark set:
+
+- Cased-favored: CoNLL-2003 NER, WNUT-17 NER, OntoNotes v5 NER, PTB POS.
+- Uncased-favored: TweetEval Irony, SST-5, 20 Newsgroups, TweetEval Sentiment,
+  TweetEval Offensive, TweetEval Emotion, STS-B validation, Yahoo Answers.
+
+## Active Work Queue
+
+1. Make benchmark runners fully multi-seed-safe.
+2. Run a 5-seed confirmation sweep on the strongest and cheapest tasks first:
+   WNUT-17, CoNLL-2003, TweetEval Irony, TweetEval Offensive, SST-5, and
+   20 Newsgroups.
+3. Run paired bootstrap significance tests for the 5-seed sweep.
+4. Rerun STS-B on validation with the regression fix.
+5. Decide whether Yahoo Answers should be full-dataset, sampled, or omitted from
+   the first submission table.
+6. If the 5-seed sweep holds, expand to 10 seeds for headline tasks.

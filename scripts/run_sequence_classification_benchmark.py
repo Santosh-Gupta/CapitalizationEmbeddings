@@ -329,7 +329,9 @@ def run_one_model(
 def prediction_path(args: argparse.Namespace, output_root: Path, model_key: str) -> Path:
     if args.results_file:
         results_file = Path(args.results_file)
-        return results_file.with_name(f"{results_file.stem}_{model_key}_predictions.jsonl")
+        return results_file.with_name(
+            f"{results_file.stem}_{model_key}_seed_{args.seed}_predictions.jsonl",
+        )
     return output_root / model_key / f"seed_{args.seed}" / "predictions.jsonl"
 
 
