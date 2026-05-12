@@ -57,6 +57,17 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertEqual(combined.processor, "combined_scientific_relations")
         self.assertEqual(combined.metric, "accuracy")
 
+    def test_scientbank_variants_are_registered(self):
+        three_way = get_benchmark("scientbank_3way_uq")
+
+        self.assertEqual(three_way.dataset_name, "nkazi/SciEntsBank")
+        self.assertEqual(three_way.processor, "scientbank_3way_uq")
+        self.assertEqual(three_way.metric, "macro_f1")
+
+        five_way = get_benchmark("scientbank_5way_ud")
+        self.assertEqual(five_way.processor, "scientbank_5way_ud")
+        self.assertEqual(five_way.metric, "accuracy")
+
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]
 

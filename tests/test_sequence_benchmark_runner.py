@@ -71,6 +71,14 @@ class SequenceBenchmarkRunnerTests(unittest.TestCase):
         self.assertIn("[E1] CNN [/E1]", rows[0]["text"])
         self.assertIn("[E2] ImageNet [/E2]", rows[0]["text"])
 
+    def test_scientbank_3way_label_collapses_partial_and_irrelevant(self):
+        self.assertEqual(self.runner.scientbank_3way_label(0), 0)
+        self.assertEqual(self.runner.scientbank_3way_label("correct"), 0)
+        self.assertEqual(self.runner.scientbank_3way_label(1), 1)
+        self.assertEqual(self.runner.scientbank_3way_label("contradictory"), 1)
+        self.assertEqual(self.runner.scientbank_3way_label(2), 2)
+        self.assertEqual(self.runner.scientbank_3way_label("partially correct incomplete"), 2)
+
     def test_tokenize_examples_maps_string_labels(self):
         class FakeTokenizer:
             sep_token = "[SEP]"

@@ -261,6 +261,72 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         status="implemented",
         processor="combined_scientific_relations",
     ),
+    BenchmarkSpec(
+        key="scientbank_3way_uq",
+        task_type="sequence_classification",
+        dataset_name="nkazi/SciEntsBank",
+        dataset_config=None,
+        text_columns=("question", "reference_answer", "student_answer"),
+        label_column="label",
+        metric="macro_f1",
+        priority=21,
+        why_capitalization_matters=(
+            "Automatic short-answer grading with unseen questions; reported "
+            "uncased gains are large, likely because lexical sharing dominates "
+            "over case-specific lexical entries."
+        ),
+        status="implemented",
+        processor="scientbank_3way_uq",
+    ),
+    BenchmarkSpec(
+        key="scientbank_3way_ud",
+        task_type="sequence_classification",
+        dataset_name="nkazi/SciEntsBank",
+        dataset_config=None,
+        text_columns=("question", "reference_answer", "student_answer"),
+        label_column="label",
+        metric="macro_f1",
+        priority=22,
+        why_capitalization_matters=(
+            "Automatic short-answer grading with unseen domains; useful as a "
+            "stress test for uncased-style lexical sharing under domain shift."
+        ),
+        status="implemented",
+        processor="scientbank_3way_ud",
+    ),
+    BenchmarkSpec(
+        key="scientbank_5way_uq",
+        task_type="sequence_classification",
+        dataset_name="nkazi/SciEntsBank",
+        dataset_config=None,
+        text_columns=("question", "reference_answer", "student_answer"),
+        label_column="label",
+        metric="accuracy",
+        priority=23,
+        why_capitalization_matters=(
+            "Five-way short-answer grading with unseen questions; a related "
+            "variant of SciEntsBank for checking whether the uncased advantage "
+            "persists under a finer label taxonomy."
+        ),
+        status="implemented",
+        processor="scientbank_5way_uq",
+    ),
+    BenchmarkSpec(
+        key="scientbank_5way_ud",
+        task_type="sequence_classification",
+        dataset_name="nkazi/SciEntsBank",
+        dataset_config=None,
+        text_columns=("question", "reference_answer", "student_answer"),
+        label_column="label",
+        metric="accuracy",
+        priority=24,
+        why_capitalization_matters=(
+            "Five-way short-answer grading with unseen domains; related to the "
+            "3-way setting but useful as an additional robustness slice."
+        ),
+        status="implemented",
+        processor="scientbank_5way_ud",
+    ),
 )
 
 

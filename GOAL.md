@@ -63,6 +63,10 @@ Uncased-favored tasks:
   scientific relation classification and combined SemEval18+SciERC relation
   classification, making these better proof targets than many general sentiment
   tasks.
+- SciEntsBank automatic short-answer grading is a high-value related benchmark
+  family, especially 3-way unseen-question/unseen-domain variants where reported
+  uncased gains are very large. Treat the SciEntsBank variants as related slices,
+  not independent datasets, when writing the paper.
 - STS-B needs validation-split rerun because GLUE test labels are hidden.
 - Yahoo Answers is pending because full fine-tuning is much larger than the
   other sequence tasks.
@@ -82,8 +86,9 @@ Target final headline benchmark set:
 - Cased-favored: CoNLL-2003 NER, WNUT-17 NER, OntoNotes v5 NER, PTB POS.
 - Uncased-favored: TweetEval Irony, SST-5, 20 Newsgroups, TweetEval Sentiment,
   TweetEval Offensive, SemEval18 scientific relation classification,
-  combined SemEval18+SciERC scientific relation classification, TweetEval
-  Emotion, STS-B validation, Yahoo Answers.
+  combined SemEval18+SciERC scientific relation classification, SciEntsBank
+  3-way TUQ/TUD and 5-way TUQ/TUD, TweetEval Emotion, STS-B validation,
+  Yahoo Answers.
 
 Additional candidates:
 

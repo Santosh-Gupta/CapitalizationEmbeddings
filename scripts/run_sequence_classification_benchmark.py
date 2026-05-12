@@ -153,12 +153,59 @@ def load_benchmark_dataset(dataset_name: str, dataset_config: str | None):
 def load_prepared_benchmark_dataset(spec: Any, *, seed: int):
     if spec.processor == "combined_scientific_relations":
         return load_combined_scientific_relations(seed=seed)
+    if isinstance(spec.processor, str) and spec.processor.startswith("scientbank_"):
+        raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
+        return prepare_scientbank(raw, processor=spec.processor, seed=seed)
 
     if spec.processor == "semeval2018_task7_relations":
         raw = load_hf_parquet_dataset(spec.dataset_name, spec.dataset_config or "default")
         return prepare_semeval2018_task7(raw)
     raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
     return raw
+
+
+def prepare_scientbank(raw, *, processor: str, seed: int):
+    from datasets import DatasetDict
+
+    parts = processor.split("_")
+    if len(parts) != 3 or parts[0] != "scientbank":
+        raise ValueError(f"Unexpected SciEntsBank processor {processor!r}.")
+    label_mode = parts[1]
+    target_split = f"test_{parts[2]}"
+    if target_split not in raw:
+        available = ", ".join(raw.keys())
+        raise KeyError(f"SciEntsBank split {target_split!r} not found. Available: {available}")
+
+    train_validation = raw["train"].train_test_split(test_size=0.1, seed=seed)
+    return DatasetDict(
+        {
+            "train": normalize_scientbank_labels(train_validation["train"], label_mode),
+            "validation": normalize_scientbank_labels(train_validation["test"], label_mode),
+            "test": normalize_scientbank_labels(raw[target_split], label_mode),
+        }
+    )
+
+
+def normalize_scientbank_labels(dataset, label_mode: str):
+    if label_mode == "5way":
+        return dataset
+    if label_mode != "3way":
+        raise ValueError(f"Unsupported SciEntsBank label mode {label_mode!r}.")
+    return dataset.map(
+        lambda examples: {
+            "label": [scientbank_3way_label(label) for label in examples["label"]]
+        },
+        batched=True,
+    )
+
+
+def scientbank_3way_label(label: Any) -> int:
+    label_text = str(label).lower().replace("-", "_").replace(" ", "_")
+    if label_text in {"0", "correct"}:
+        return 0
+    if label_text in {"1", "contradictory"}:
+        return 1
+    return 2
 
 
 def load_hf_parquet_dataset(dataset_name: str, config: str):
