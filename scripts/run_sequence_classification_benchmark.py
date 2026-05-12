@@ -251,13 +251,17 @@ def run_one_model(
         )
         data_collator = DataCollatorForCapitalizedSequenceClassification(tokenizer=tokenizer)
     else:
+        model_kwargs = {
+            "num_labels": num_labels,
+            "problem_type": "regression" if is_regression else "single_label_classification",
+            "ignore_mismatched_sizes": True,
+        }
+        if id2label is not None and label2id is not None:
+            model_kwargs["id2label"] = id2label
+            model_kwargs["label2id"] = label2id
         model = AutoModelForSequenceClassification.from_pretrained(
             checkpoint or model_name,
-            num_labels=num_labels,
-            id2label=id2label,
-            label2id=label2id,
-            problem_type="regression" if is_regression else "single_label_classification",
-            ignore_mismatched_sizes=True,
+            **model_kwargs,
         )
         data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
