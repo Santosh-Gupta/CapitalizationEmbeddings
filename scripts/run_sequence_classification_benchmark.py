@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-test-samples", type=int, default=0)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--no-fp16", action="store_true")
+    parser.add_argument("--no-save-model", action="store_true")
     return parser.parse_args()
 
 
@@ -424,8 +425,9 @@ def run_one_model(
         labels=prediction_output.label_ids,
         regression=is_regression,
     )
-    trainer.save_model(str(output_dir / "final"))
-    tokenizer.save_pretrained(str(output_dir / "final"))
+    if not args.no_save_model:
+        trainer.save_model(str(output_dir / "final"))
+        tokenizer.save_pretrained(str(output_dir / "final"))
 
     row = {
         "model_key": model_key,

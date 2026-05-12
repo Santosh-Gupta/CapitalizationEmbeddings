@@ -50,6 +50,7 @@ def run_task(
     batch_size: str,
     epochs: str,
     dry_run: bool,
+    no_save_model: bool,
 ) -> None:
     results_file = results_root / task / "results.jsonl"
     results_file.parent.mkdir(parents=True, exist_ok=True)
@@ -85,6 +86,8 @@ def run_task(
             "--results-file",
             str(results_file),
         ]
+        if no_save_model:
+            command.append("--no-save-model")
         run_command(command, dry_run=dry_run)
         completed = completed_rows(results_file)
 
@@ -104,6 +107,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sequence-batch-size", default="16")
     parser.add_argument("--token-learning-rate", default="3e-5")
     parser.add_argument("--sequence-learning-rate", default="2e-5")
+    parser.add_argument("--no-save-model", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -123,6 +127,7 @@ def main() -> None:
             batch_size=args.token_batch_size,
             epochs=args.token_epochs,
             dry_run=args.dry_run,
+            no_save_model=args.no_save_model,
         )
 
     for task in args.sequence_tasks:
@@ -138,6 +143,7 @@ def main() -> None:
             batch_size=args.sequence_batch_size,
             epochs=args.sequence_epochs,
             dry_run=args.dry_run,
+            no_save_model=args.no_save_model,
         )
 
 
