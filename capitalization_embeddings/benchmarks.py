@@ -99,6 +99,37 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         status="implemented",
     ),
     BenchmarkSpec(
+        key="tweet_eval_emoji",
+        task_type="sequence_classification",
+        dataset_name="tweet_eval",
+        dataset_config="emoji",
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=6,
+        why_capitalization_matters=(
+            "Social emoji prediction has one of the largest reported cased-over-"
+            "uncased gaps in the IBM 36-task table; useful as a cased-favored "
+            "sequence-classification counterpoint."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="trec_fine",
+        task_type="sequence_classification",
+        dataset_name="lukasgarbas/trec",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="fine_label",
+        metric="accuracy",
+        priority=7,
+        why_capitalization_matters=(
+            "Fine-grained question classification is a standard compact task "
+            "where cased BERT has a reported multi-point advantage over uncased."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
         key="tweet_eval_irony",
         task_type="sequence_classification",
         dataset_name="tweet_eval",

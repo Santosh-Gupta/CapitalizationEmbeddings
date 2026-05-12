@@ -84,6 +84,7 @@ For every headline benchmark:
 Target final headline benchmark set:
 
 - Cased-favored: CoNLL-2003 NER, WNUT-17 NER, OntoNotes v5 NER, PTB POS.
+  Optional extra cased-favored sequence tasks: TREC Fine and TweetEval Emoji.
 - Uncased-favored: TweetEval Irony, SST-5, 20 Newsgroups, TweetEval Sentiment,
   TweetEval Offensive, SemEval18 scientific relation classification,
   combined SemEval18+SciERC scientific relation classification, SciEntsBank

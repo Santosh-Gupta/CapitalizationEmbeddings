@@ -14,6 +14,8 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertIn("conll2003_pos", keys)
         self.assertIn("tweet_eval_irony", keys)
         self.assertIn("stsb", keys)
+        self.assertIn("tweet_eval_emoji", keys)
+        self.assertIn("trec_fine", keys)
 
     def test_get_benchmark_returns_specs_by_key(self):
         spec = get_benchmark("conll2003_ner")
@@ -67,6 +69,17 @@ class BenchmarkRegistryTests(unittest.TestCase):
         five_way = get_benchmark("scientbank_5way_ud")
         self.assertEqual(five_way.processor, "scientbank_5way_ud")
         self.assertEqual(five_way.metric, "accuracy")
+
+    def test_extra_cased_favored_sequence_benchmarks_are_registered(self):
+        emoji = get_benchmark("tweet_eval_emoji")
+
+        self.assertEqual(emoji.dataset_name, "tweet_eval")
+        self.assertEqual(emoji.dataset_config, "emoji")
+        self.assertEqual(emoji.metric, "accuracy")
+
+        trec = get_benchmark("trec_fine")
+        self.assertEqual(trec.dataset_name, "lukasgarbas/trec")
+        self.assertEqual(trec.label_column, "fine_label")
 
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]
