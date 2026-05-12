@@ -8,6 +8,7 @@ import csv
 import json
 import numbers
 import random
+import tempfile
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -153,10 +154,33 @@ def load_prepared_benchmark_dataset(spec: Any, *, seed: int):
     if spec.processor == "combined_scientific_relations":
         return load_combined_scientific_relations(seed=seed)
 
-    raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
     if spec.processor == "semeval2018_task7_relations":
+        raw = load_hf_parquet_dataset(spec.dataset_name, spec.dataset_config or "default")
         return prepare_semeval2018_task7(raw)
+    raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
     return raw
+
+
+def load_hf_parquet_dataset(dataset_name: str, config: str):
+    import pandas as pd
+    import requests
+    from datasets import Dataset, DatasetDict
+
+    response = requests.get(f"https://huggingface.co/api/datasets/{dataset_name}/parquet", timeout=60)
+    response.raise_for_status()
+    parquet_index = response.json()[config]
+    datasets = {}
+    for split, urls in parquet_index.items():
+        frames = []
+        for url in urls:
+            parquet_response = requests.get(url, timeout=120)
+            parquet_response.raise_for_status()
+            with tempfile.NamedTemporaryFile(suffix=".parquet") as handle:
+                handle.write(parquet_response.content)
+                handle.flush()
+                frames.append(pd.read_parquet(handle.name))
+        datasets[split] = Dataset.from_pandas(pd.concat(frames, ignore_index=True))
+    return DatasetDict(datasets)
 
 
 def prepare_semeval2018_task7(raw):
@@ -237,7 +261,9 @@ def entity_text(entity: Any) -> str:
 def load_combined_scientific_relations(*, seed: int):
     from datasets import DatasetDict, concatenate_datasets, load_dataset
 
-    semeval = prepare_semeval2018_task7(load_dataset("DFKI-SLT/SemEval2018_Task7", "Subtask_1_1"))
+    semeval = prepare_semeval2018_task7(
+        load_hf_parquet_dataset("DFKI-SLT/SemEval2018_Task7", "Subtask_1_1")
+    )
     scierc = load_dataset("nsusemiehl/SciERC")
     scierc = DatasetDict(
         {
