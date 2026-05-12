@@ -172,6 +172,20 @@ class SequenceBenchmarkRunnerTests(unittest.TestCase):
 
         self.assertEqual(split, "test")
 
+    def test_single_class_classification_test_labels_use_validation_split(self):
+        raw = {
+            "validation": {"label": [0, 1]},
+            "test": {"label": [0, 0]},
+        }
+
+        split = self.runner.labeled_evaluation_split(
+            raw,
+            "label",
+            regression=False,
+        )
+
+        self.assertEqual(split, "validation")
+
     def test_jsonl_and_csv_writers_create_scoreboard_files(self):
         row = {
             "benchmark": "tweet_eval_irony",

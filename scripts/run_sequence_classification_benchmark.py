@@ -574,6 +574,8 @@ def labeled_evaluation_split(raw, label_column: str, *, regression: bool) -> str
         return "validation"
     if not regression and all(is_hidden_classification_label(label) for label in labels):
         return "validation"
+    if not regression and len({str(label) for label in labels}) <= 1 and "validation" in raw:
+        return "validation"
     return "test"
 
 
