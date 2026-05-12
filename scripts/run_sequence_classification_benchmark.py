@@ -525,9 +525,16 @@ def labeled_evaluation_split(raw, label_column: str, *, regression: bool) -> str
         return "validation"
     if regression and all(float(label) < 0 for label in labels):
         return "validation"
-    if not regression and all(int(label) < 0 for label in labels):
+    if not regression and all(is_hidden_classification_label(label) for label in labels):
         return "validation"
     return "test"
+
+
+def is_hidden_classification_label(label: Any) -> bool:
+    try:
+        return int(label) < 0
+    except (TypeError, ValueError):
+        return False
 
 
 def checkpoint_for_model(
