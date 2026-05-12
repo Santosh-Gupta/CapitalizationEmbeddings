@@ -12,6 +12,8 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertIn("ontonotes5_ner", keys)
         self.assertIn("ptb_pos", keys)
         self.assertIn("conll2003_pos", keys)
+        self.assertIn("tweet_eval_irony", keys)
+        self.assertIn("stsb", keys)
 
     def test_get_benchmark_returns_specs_by_key(self):
         spec = get_benchmark("conll2003_ner")
@@ -31,6 +33,17 @@ class BenchmarkRegistryTests(unittest.TestCase):
 
         self.assertEqual(spec.dataset_name, "extraordinarylab/ontonotes5")
         self.assertEqual(spec.label_column, "ner_tags")
+
+    def test_uncased_favored_sequence_benchmarks_are_registered(self):
+        spec = get_benchmark("tweet_eval_irony")
+
+        self.assertEqual(spec.task_type, "sequence_classification")
+        self.assertEqual(spec.dataset_name, "tweet_eval")
+        self.assertEqual(spec.dataset_config, "irony")
+
+        stsb = get_benchmark("stsb")
+        self.assertEqual(stsb.task_type, "sequence_regression")
+        self.assertEqual(stsb.text_columns, ("sentence1", "sentence2"))
 
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]

@@ -6,6 +6,7 @@ from capitalization_embeddings.modeling import (
     CapitalizedBertConfig,
     CapitalizedBertForMaskedLM,
     CapitalizedBertModel,
+    CapitalizedBertForSequenceClassification,
     CapitalizedBertForTokenClassification,
 )
 
@@ -110,6 +111,22 @@ class ModelingTests(unittest.TestCase):
         )
 
         self.assertEqual(tuple(outputs.logits.shape), (1, 5, 5))
+        self.assertIsNotNone(outputs.loss)
+
+    def test_sequence_classifier_forward_accepts_capitalization_ids(self):
+        model = CapitalizedBertForSequenceClassification(tiny_config())
+        input_ids = torch.tensor([[2, 10, 11, 12, 3]])
+        capitalization_ids = torch.tensor([[0, 1, 0, 2, 0]])
+        labels = torch.tensor([1])
+
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=torch.ones_like(input_ids),
+            capitalization_ids=capitalization_ids,
+            labels=labels,
+        )
+
+        self.assertEqual(tuple(outputs.logits.shape), (1, 5))
         self.assertIsNotNone(outputs.loss)
 
 

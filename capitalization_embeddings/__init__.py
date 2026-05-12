@@ -2,6 +2,7 @@
 
 from .collator import (
     DataCollatorForCapitalizedLanguageModeling,
+    DataCollatorForCapitalizedSequenceClassification,
     DataCollatorForCapitalizedTokenClassification,
 )
 from .benchmarks import BENCHMARKS, BenchmarkSpec, benchmark_keys, get_benchmark
@@ -9,6 +10,7 @@ from .hf_compat import make_trainer, make_training_arguments
 from .modeling import (
     CapitalizedBertConfig,
     CapitalizedBertForMaskedLM,
+    CapitalizedBertForSequenceClassification,
     CapitalizedBertForTokenClassification,
     CapitalizedBertModel,
 )
@@ -40,9 +42,11 @@ __all__ = [
     "NO_CAP",
     "CapitalizedBertConfig",
     "CapitalizedBertForMaskedLM",
+    "CapitalizedBertForSequenceClassification",
     "CapitalizedBertForTokenClassification",
     "CapitalizedBertModel",
     "DataCollatorForCapitalizedLanguageModeling",
+    "DataCollatorForCapitalizedSequenceClassification",
     "DataCollatorForCapitalizedTokenClassification",
     "cache_dir",
     "capitalization_ids_from_offsets",

@@ -8,6 +8,7 @@ from transformers import BertTokenizerFast
 
 from capitalization_embeddings import (
     DataCollatorForCapitalizedLanguageModeling,
+    DataCollatorForCapitalizedSequenceClassification,
     DataCollatorForCapitalizedTokenClassification,
 )
 
@@ -108,6 +109,31 @@ class CollatorTests(unittest.TestCase):
         self.assertEqual(tuple(batch["labels"].shape), (2, 4))
         self.assertEqual(tuple(batch["capitalization_ids"].shape), (2, 4))
         self.assertEqual(batch["labels"][1, -1].item(), -100)
+        self.assertEqual(batch["capitalization_ids"][1, -1].item(), 0)
+
+    def test_sequence_classification_collator_pads_capitalization_ids(self):
+        tokenizer = tiny_tokenizer()
+        collator = DataCollatorForCapitalizedSequenceClassification(tokenizer=tokenizer)
+        features = [
+            {
+                "input_ids": [2, 5, 6, 3],
+                "attention_mask": [1, 1, 1, 1],
+                "labels": 1,
+                "capitalization_ids": [0, 1, 0, 0],
+            },
+            {
+                "input_ids": [2, 7, 3],
+                "attention_mask": [1, 1, 1],
+                "labels": 0,
+                "capitalization_ids": [0, 2, 0],
+            },
+        ]
+
+        batch = collator(features)
+
+        self.assertEqual(tuple(batch["input_ids"].shape), (2, 4))
+        self.assertEqual(tuple(batch["labels"].shape), (2,))
+        self.assertEqual(tuple(batch["capitalization_ids"].shape), (2, 4))
         self.assertEqual(batch["capitalization_ids"][1, -1].item(), 0)
 
 

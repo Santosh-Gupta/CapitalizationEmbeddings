@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from typing import Any
 
 import torch
-from transformers import DataCollatorForTokenClassification, PreTrainedTokenizerBase
+from transformers import (
+    DataCollatorForTokenClassification,
+    DataCollatorWithPadding,
+    PreTrainedTokenizerBase,
+)
 
 
 @dataclass
@@ -128,6 +132,40 @@ class DataCollatorForCapitalizedTokenClassification:
             max_length=self.max_length,
             pad_to_multiple_of=self.pad_to_multiple_of,
             label_pad_token_id=self.label_pad_token_id,
+            return_tensors=self.return_tensors,
+        )
+
+    def __call__(self, features: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+        features = [dict(feature) for feature in features]
+        capitalization_ids = [feature.pop("capitalization_ids") for feature in features]
+        batch = self.base_collator(features)
+        batch["capitalization_ids"] = _pad_sequences_like_input_ids(
+            capitalization_ids,
+            batch["input_ids"],
+            padding_side=self.tokenizer.padding_side,
+            pad_value=0,
+        )
+        return batch
+
+
+@dataclass
+class DataCollatorForCapitalizedSequenceClassification:
+    """Sequence-classification collator that pads capitalization IDs."""
+
+    tokenizer: PreTrainedTokenizerBase
+    padding: bool | str = True
+    max_length: int | None = None
+    pad_to_multiple_of: int | None = None
+    return_tensors: str = "pt"
+
+    def __post_init__(self) -> None:
+        if self.return_tensors != "pt":
+            raise ValueError("This collator currently supports return_tensors='pt' only.")
+        self.base_collator = DataCollatorWithPadding(
+            tokenizer=self.tokenizer,
+            padding=self.padding,
+            max_length=self.max_length,
+            pad_to_multiple_of=self.pad_to_multiple_of,
             return_tensors=self.return_tensors,
         )
 

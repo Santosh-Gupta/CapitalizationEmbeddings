@@ -7,11 +7,12 @@ from typing import Any
 
 import torch
 from torch import nn
-from torch.nn import CrossEntropyLoss
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers import BertConfig
 from transformers.modeling_outputs import (
     BaseModelOutputWithPoolingAndCrossAttentions,
     ModelOutput,
+    SequenceClassifierOutput,
     TokenClassifierOutput,
 )
 from transformers.models.bert.modeling_bert import (
@@ -561,6 +562,109 @@ class CapitalizedBertForTokenClassification(BertPreTrainedModel):
             return ((loss,) + output) if loss is not None else output
 
         return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
+
+class CapitalizedBertForSequenceClassification(BertPreTrainedModel):
+    """Sequence classifier for sentence-level benchmarks."""
+
+    config_class = CapitalizedBertConfig
+
+    def __init__(self, config: CapitalizedBertConfig) -> None:
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+        self.bert = CapitalizedBertModel(config)
+        classifier_dropout = (
+            config.classifier_dropout
+            if config.classifier_dropout is not None
+            else config.hidden_dropout_prob
+        )
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.post_init()
+
+    @classmethod
+    def from_uncased_pretrained(
+        cls,
+        pretrained_model_name_or_path: str = "bert-base-uncased",
+        **kwargs: Any,
+    ) -> "CapitalizedBertForSequenceClassification":
+        config_kwargs = kwargs.pop("config_kwargs", {})
+        config = kwargs.pop(
+            "config",
+            CapitalizedBertConfig.from_pretrained(
+                pretrained_model_name_or_path,
+                **config_kwargs,
+            ),
+        )
+        return cls.from_pretrained(
+            pretrained_model_name_or_path,
+            config=config,
+            **kwargs,
+        )
+
+    def forward(
+        self,
+        input_ids: torch.LongTensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        token_type_ids: torch.LongTensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        capitalization_ids: torch.LongTensor | None = None,
+        head_mask: torch.Tensor | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
+        labels: torch.Tensor | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        return_dict: bool | None = None,
+    ) -> SequenceClassifierOutput | tuple[torch.Tensor, ...]:
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            capitalization_ids=capitalization_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        pooled_output = self.dropout(outputs[1])
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and labels.dtype in (torch.long, torch.int):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                loss = loss_fct(logits.squeeze(), labels.squeeze())
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return SequenceClassifierOutput(
             loss=loss,
             logits=logits,
             hidden_states=outputs.hidden_states,

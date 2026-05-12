@@ -97,6 +97,120 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         ),
         status="implemented",
     ),
+    BenchmarkSpec(
+        key="tweet_eval_irony",
+        task_type="sequence_classification",
+        dataset_name="tweet_eval",
+        dataset_config="irony",
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=10,
+        why_capitalization_matters=(
+            "Noisy social text where casing can be expressive or inconsistent; "
+            "reported BERT baselines often favor uncased."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="tweet_eval_sentiment",
+        task_type="sequence_classification",
+        dataset_name="tweet_eval",
+        dataset_config="sentiment",
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=11,
+        why_capitalization_matters=(
+            "Social sentiment classification where lexical unification may matter "
+            "more than preserving case."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="tweet_eval_offensive",
+        task_type="sequence_classification",
+        dataset_name="tweet_eval",
+        dataset_config="offensive",
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=12,
+        why_capitalization_matters=(
+            "Noisy social classification with inconsistent casing."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="tweet_eval_emotion",
+        task_type="sequence_classification",
+        dataset_name="tweet_eval",
+        dataset_config="emotion",
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=13,
+        why_capitalization_matters=(
+            "Noisy emotion classification where uncased baselines can be stronger."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="sst5",
+        task_type="sequence_classification",
+        dataset_name="SetFit/sst5",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=14,
+        why_capitalization_matters=(
+            "Fine-grained sentiment where case is usually not the core signal."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="stsb",
+        task_type="sequence_regression",
+        dataset_name="glue",
+        dataset_config="stsb",
+        text_columns=("sentence1", "sentence2"),
+        label_column="label",
+        metric="pearson",
+        priority=15,
+        why_capitalization_matters=(
+            "Semantic similarity should reward lexical sharing across casing."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="twenty_newsgroups",
+        task_type="sequence_classification",
+        dataset_name="SetFit/20_newsgroups",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="label",
+        metric="accuracy",
+        priority=16,
+        why_capitalization_matters=(
+            "Topic classification where vocabulary sharing can outweigh case cues."
+        ),
+        status="implemented",
+    ),
+    BenchmarkSpec(
+        key="yahoo_answers_topics",
+        task_type="sequence_classification",
+        dataset_name="yahoo_answers_topics",
+        dataset_config=None,
+        text_columns=("question_title", "question_content", "best_answer"),
+        label_column="topic",
+        metric="accuracy",
+        priority=17,
+        why_capitalization_matters=(
+            "Noisy web topic classification where uncased BERT can have an edge."
+        ),
+        status="implemented",
+    ),
 )
 
 
