@@ -58,6 +58,11 @@ Uncased-favored tasks:
 - Capitalized beats both matched controls on TweetEval Irony, SST-5,
   20 Newsgroups, TweetEval Sentiment, and TweetEval Offensive.
 - TweetEval Emotion is currently a miss against matched uncased.
+- Scientific relation classification is now a high-priority uncased-favored
+  family. Reported gaps favor uncased BERT by about 2.8-3.0 points on SemEval18
+  scientific relation classification and combined SemEval18+SciERC relation
+  classification, making these better proof targets than many general sentiment
+  tasks.
 - STS-B needs validation-split rerun because GLUE test labels are hidden.
 - Yahoo Answers is pending because full fine-tuning is much larger than the
   other sequence tasks.
@@ -76,7 +81,19 @@ Target final headline benchmark set:
 
 - Cased-favored: CoNLL-2003 NER, WNUT-17 NER, OntoNotes v5 NER, PTB POS.
 - Uncased-favored: TweetEval Irony, SST-5, 20 Newsgroups, TweetEval Sentiment,
-  TweetEval Offensive, TweetEval Emotion, STS-B validation, Yahoo Answers.
+  TweetEval Offensive, SemEval18 scientific relation classification,
+  combined SemEval18+SciERC scientific relation classification, TweetEval
+  Emotion, STS-B validation, Yahoo Answers.
+
+Additional candidates:
+
+- HASOC 2021 English Hate-Offensive Task A is a strong conceptual fit for the
+  "uncased wins on noisy social text" claim, but official data access appears
+  gated. Add it if the dataset files or a reliable public mirror are available.
+- IWSLT 2012 TED punctuation restoration is useful only as a diagnostic
+  lexical-sharing benchmark because the corpus is explicitly lowercased in the
+  reported setup. It should not be used as primary evidence for capitalization
+  embeddings unless the experiment is reframed.
 
 ## Active Work Queue
 
@@ -86,6 +103,8 @@ Target final headline benchmark set:
    20 Newsgroups.
 3. Run paired bootstrap significance tests for the 5-seed sweep.
 4. Rerun STS-B on validation with the regression fix.
-5. Decide whether Yahoo Answers should be full-dataset, sampled, or omitted from
+5. Smoke-test SemEval18/SciERC relation classification on RunPod, then add the
+   clean scientific relation tasks to the multi-seed queue.
+6. Decide whether Yahoo Answers should be full-dataset, sampled, or omitted from
    the first submission table.
-6. If the 5-seed sweep holds, expand to 10 seeds for headline tasks.
+7. If the 5-seed sweep holds, expand to 10 seeds for headline tasks.
