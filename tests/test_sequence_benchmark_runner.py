@@ -111,6 +111,24 @@ class SequenceBenchmarkRunnerTests(unittest.TestCase):
             self.assertIn("benchmark,model_key,test_accuracy", csv_text)
             self.assertIn("tweet_eval_irony,capitalized_pretrained,0.7", csv_text)
 
+    def test_save_sequence_predictions_writes_paired_records(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "predictions.jsonl"
+
+            self.runner.save_sequence_predictions(
+                path=path,
+                model_key="uncased",
+                benchmark="tweet_eval_irony",
+                evaluation_split="test",
+                predictions=[[0.1, 0.9], [0.8, 0.2]],
+                labels=[1, 0],
+                regression=False,
+            )
+
+            text = path.read_text()
+            self.assertIn('"prediction": 1', text)
+            self.assertIn('"label": 0', text)
+
 
 if __name__ == "__main__":
     unittest.main()

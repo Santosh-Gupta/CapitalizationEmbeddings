@@ -370,7 +370,17 @@ def run_one_model(
     )
 
     train_result = trainer.train()
-    test_metrics = trainer.evaluate(tokenized["test"], metric_key_prefix="test")
+    prediction_output = trainer.predict(tokenized["test"], metric_key_prefix="test")
+    test_metrics = prediction_output.metrics
+    prediction_file = prediction_path(args, output_root, model_key)
+    save_token_predictions(
+        path=prediction_file,
+        model_key=model_key,
+        benchmark=args.benchmark,
+        predictions=prediction_output.predictions,
+        labels=prediction_output.label_ids,
+        label_list=label_list,
+    )
     trainer.save_model(str(output_dir / "final"))
     tokenizer.save_pretrained(str(output_dir / "final"))
 
@@ -380,9 +390,58 @@ def run_one_model(
         "pretraining_checkpoint": checkpoint,
         "output_dir": str(output_dir),
         "train_loss": train_result.training_loss,
+        "prediction_file": str(prediction_file),
     }
     row.update(flatten_metrics(test_metrics))
     return row
+
+
+def prediction_path(args: argparse.Namespace, output_root: Path, model_key: str) -> Path:
+    if args.results_file:
+        results_file = Path(args.results_file)
+        return results_file.with_name(f"{results_file.stem}_{model_key}_predictions.jsonl")
+    return output_root / model_key / "predictions.jsonl"
+
+
+def save_token_predictions(
+    *,
+    path: Path,
+    model_key: str,
+    benchmark: str,
+    predictions: Any,
+    labels: Any,
+    label_list: list[str],
+) -> None:
+    import numpy as np
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    predicted_ids = np.argmax(predictions, axis=-1)
+    label_ids = np.asarray(labels)
+    with path.open("w", encoding="utf-8") as handle:
+        for index, (prediction_row, label_row) in enumerate(
+            zip(predicted_ids, label_ids, strict=True),
+        ):
+            true_predictions = []
+            true_labels = []
+            for prediction, label in zip(prediction_row, label_row, strict=True):
+                if int(label) == -100:
+                    continue
+                true_predictions.append(label_list[int(prediction)])
+                true_labels.append(label_list[int(label)])
+            handle.write(
+                json.dumps(
+                    {
+                        "benchmark": benchmark,
+                        "model_key": model_key,
+                        "evaluation_split": "test",
+                        "index": index,
+                        "predictions": true_predictions,
+                        "labels": true_labels,
+                    },
+                    sort_keys=True,
+                )
+                + "\n"
+            )
 
 
 def checkpoint_for_model(

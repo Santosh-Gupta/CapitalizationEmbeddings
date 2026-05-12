@@ -298,7 +298,18 @@ def run_one_model(
 
     train_result = trainer.train()
     eval_split = labeled_evaluation_split(raw, spec.label_column, regression=is_regression)
-    test_metrics = trainer.evaluate(tokenized[eval_split], metric_key_prefix="test")
+    prediction_output = trainer.predict(tokenized[eval_split], metric_key_prefix="test")
+    test_metrics = prediction_output.metrics
+    prediction_file = prediction_path(args, output_root, model_key)
+    save_sequence_predictions(
+        path=prediction_file,
+        model_key=model_key,
+        benchmark=args.benchmark,
+        evaluation_split=eval_split,
+        predictions=prediction_output.predictions,
+        labels=prediction_output.label_ids,
+        regression=is_regression,
+    )
     trainer.save_model(str(output_dir / "final"))
     tokenizer.save_pretrained(str(output_dir / "final"))
 
@@ -309,9 +320,57 @@ def run_one_model(
         "output_dir": str(output_dir),
         "train_loss": train_result.training_loss,
         "evaluation_split": eval_split,
+        "prediction_file": str(prediction_file),
     }
     row.update(flatten_metrics(test_metrics))
     return row
+
+
+def prediction_path(args: argparse.Namespace, output_root: Path, model_key: str) -> Path:
+    if args.results_file:
+        results_file = Path(args.results_file)
+        return results_file.with_name(f"{results_file.stem}_{model_key}_predictions.jsonl")
+    return output_root / model_key / f"seed_{args.seed}" / "predictions.jsonl"
+
+
+def save_sequence_predictions(
+    *,
+    path: Path,
+    model_key: str,
+    benchmark: str,
+    evaluation_split: str,
+    predictions: Any,
+    labels: Any,
+    regression: bool,
+) -> None:
+    import numpy as np
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    logits = np.asarray(predictions)
+    label_array = np.asarray(labels)
+    if regression:
+        predicted_values = logits.squeeze().tolist()
+        label_values = label_array.squeeze().tolist()
+    else:
+        predicted_values = np.argmax(logits, axis=-1).tolist()
+        label_values = label_array.astype(int).tolist()
+
+    with path.open("w", encoding="utf-8") as handle:
+        for index, (prediction, label) in enumerate(zip(predicted_values, label_values, strict=True)):
+            handle.write(
+                json.dumps(
+                    {
+                        "benchmark": benchmark,
+                        "model_key": model_key,
+                        "evaluation_split": evaluation_split,
+                        "index": index,
+                        "prediction": prediction,
+                        "label": label,
+                    },
+                    sort_keys=True,
+                )
+                + "\n"
+            )
 
 
 def labeled_evaluation_split(raw, label_column: str, *, regression: bool) -> str:

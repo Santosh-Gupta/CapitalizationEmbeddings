@@ -113,6 +113,23 @@ class BenchmarkRunnerTests(unittest.TestCase):
             self.assertIn("benchmark,model_key,test_f1", csv_text)
             self.assertIn("conll2003_ner,uncased,0.8", csv_text)
 
+    def test_save_token_predictions_writes_label_sequences(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "predictions.jsonl"
+
+            self.runner.save_token_predictions(
+                path=path,
+                model_key="capitalized_pretrained",
+                benchmark="conll2003_ner",
+                predictions=[[[0.1, 0.9], [0.8, 0.2], [0.7, 0.3]]],
+                labels=[[-100, 1, 0]],
+                label_list=["O", "B-PER"],
+            )
+
+            text = path.read_text()
+            self.assertIn('"predictions": ["O", "O"]', text)
+            self.assertIn('"labels": ["B-PER", "O"]', text)
+
 
 if __name__ == "__main__":
     unittest.main()
