@@ -206,6 +206,7 @@ def load_model_and_tokenizer(
             model = CapitalizedBertForMaskedLM.from_pretrained(
                 initial_checkpoint,
                 config=config,
+                ignore_mismatched_sizes=True,
             )
         else:
             model = CapitalizedBertForMaskedLM.from_uncased_pretrained(

@@ -41,6 +41,7 @@ def run_task(
     *,
     task: str,
     script: str,
+    models: list[str],
     seeds: list[int],
     results_root: Path,
     uncased_checkpoint: str,
@@ -57,7 +58,7 @@ def run_task(
     completed = completed_rows(results_file)
 
     for seed in seeds:
-        missing_models = [model for model in MODEL_KEYS if (model, seed) not in completed]
+        missing_models = [model for model in models if (model, seed) not in completed]
         if not missing_models:
             print(f"SKIP {task} seed={seed}: already complete", flush=True)
             continue
@@ -99,6 +100,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cased-checkpoint", required=True)
     parser.add_argument("--capitalized-checkpoint", required=True)
     parser.add_argument("--seeds", nargs="+", type=int, default=[13, 21, 34, 55, 89])
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=list(MODEL_KEYS),
+        choices=MODEL_KEYS,
+        help="Subset of pretrained model keys to run.",
+    )
     parser.add_argument("--token-tasks", nargs="*", default=list(TOKEN_TASKS))
     parser.add_argument("--sequence-tasks", nargs="*", default=list(SEQUENCE_TASKS))
     parser.add_argument("--token-epochs", default="3")
@@ -118,6 +126,7 @@ def main() -> None:
         run_task(
             task=task,
             script="scripts/run_token_classification_benchmark.py",
+            models=args.models,
             seeds=args.seeds,
             results_root=args.results_root,
             uncased_checkpoint=args.uncased_checkpoint,
@@ -134,6 +143,7 @@ def main() -> None:
         run_task(
             task=task,
             script="scripts/run_sequence_classification_benchmark.py",
+            models=args.models,
             seeds=args.seeds,
             results_root=args.results_root,
             uncased_checkpoint=args.uncased_checkpoint,
