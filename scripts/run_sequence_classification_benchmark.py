@@ -200,10 +200,16 @@ def normalize_scientbank_labels(dataset, label_mode: str):
 
 
 def scientbank_3way_label(label: Any) -> int:
+    if isinstance(label, int):
+        if label == 0:
+            return 0
+        if label == 1:
+            return 1
+        return 2
     label_text = str(label).lower().replace("-", "_").replace(" ", "_")
-    if label_text in {"0", "correct"}:
+    if label_text in {"correct"}:
         return 0
-    if label_text in {"1", "contradictory"}:
+    if label_text in {"contradictory"}:
         return 1
     return 2
 
