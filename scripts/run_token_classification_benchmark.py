@@ -302,6 +302,7 @@ def run_one_model(
     model_name = model_spec["model_name"]
     is_capitalized = model_spec["kind"] == "capitalized"
     checkpoint = checkpoint_for_model(model_key, model_spec, args)
+    use_mixed_case = checkpoint_uses_mixed_case(checkpoint) if is_capitalized else False
     tokenizer_name = checkpoint or model_name
     output_dir = output_root / model_key / f"seed_{args.seed}"
 
@@ -315,6 +316,7 @@ def run_one_model(
             label2id=label2id,
             max_length=args.max_length,
             capitalized=is_capitalized,
+            use_mixed_case=use_mixed_case,
         ),
         batched=True,
         remove_columns=raw["train"].column_names,
@@ -473,6 +475,7 @@ def tokenize_and_align_labels(
     label2id: dict[str, int],
     max_length: int,
     capitalized: bool,
+    use_mixed_case: bool = False,
 ) -> dict[str, Any]:
     from capitalization_embeddings import tokenize_with_capitalization
 
@@ -483,6 +486,7 @@ def tokenize_and_align_labels(
             is_split_into_words=True,
             truncation=True,
             max_length=max_length,
+            use_mixed_case=use_mixed_case,
         )
     else:
         tokenized = tokenizer(
@@ -542,6 +546,15 @@ def load_capitalized_model(
         config_kwargs=config_kwargs,
         ignore_mismatched_sizes=True,
     )
+
+
+def checkpoint_uses_mixed_case(checkpoint: str) -> bool:
+    if not checkpoint:
+        return False
+    from capitalization_embeddings import CapitalizedBertConfig
+
+    config = CapitalizedBertConfig.from_pretrained(checkpoint)
+    return int(getattr(config, "capitalization_vocab_size", 3)) >= 4
 
 
 def metric_fn(label_list: list[str], metric_name: str) -> dict[str, Any]:

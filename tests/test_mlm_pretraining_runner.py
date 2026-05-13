@@ -114,6 +114,35 @@ class MLMPretainingRunnerTests(unittest.TestCase):
             [1.0, 2.0, 8.0],
         )
 
+    def test_parse_args_accepts_mixed_case_capitalization(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "capitalized",
+            "--use-mixed-case-capitalization",
+            "--capitalization-embedding-dropout",
+            "0.1",
+            "--capitalization-class-weights",
+            "1,2,8,4",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertTrue(args.use_mixed_case_capitalization)
+        self.assertEqual(args.capitalization_embedding_dropout, 0.1)
+        self.assertEqual(
+            self.runner.parse_class_weights(args.capitalization_class_weights),
+            [1.0, 2.0, 8.0, 4.0],
+        )
+        self.assertEqual(
+            self.runner.capitalization_config_overrides(args)["capitalization_vocab_size"],
+            4,
+        )
+
     def test_parse_args_accepts_real_acronym_mix_corpus(self):
         import sys
         from unittest.mock import patch

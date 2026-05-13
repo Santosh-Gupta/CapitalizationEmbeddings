@@ -34,6 +34,7 @@ class CapitalizedBertConfig(BertConfig):
         capitalization_pad_token_id: int = 0,
         capitalization_loss_weight: float = 0.25,
         capitalization_class_weights: list[float] | None = None,
+        capitalization_embedding_dropout: float = 0.0,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -41,6 +42,7 @@ class CapitalizedBertConfig(BertConfig):
         self.capitalization_pad_token_id = capitalization_pad_token_id
         self.capitalization_loss_weight = capitalization_loss_weight
         self.capitalization_class_weights = capitalization_class_weights
+        self.capitalization_embedding_dropout = capitalization_embedding_dropout
 
 
 class CapitalizedBertEmbeddings(nn.Module):
@@ -66,6 +68,7 @@ class CapitalizedBertEmbeddings(nn.Module):
             config.hidden_size,
             padding_idx=config.capitalization_pad_token_id,
         )
+        self.capitalization_dropout = nn.Dropout(config.capitalization_embedding_dropout)
 
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -137,7 +140,9 @@ class CapitalizedBertEmbeddings(nn.Module):
         )
         embeddings = inputs_embeds
         embeddings = embeddings + self.token_type_embeddings(token_type_ids)
-        embeddings = embeddings + self.capitalization_embeddings(capitalization_ids)
+        embeddings = embeddings + self.capitalization_dropout(
+            self.capitalization_embeddings(capitalization_ids)
+        )
 
         if self.position_embedding_type == "absolute":
             _validate_embedding_indices(

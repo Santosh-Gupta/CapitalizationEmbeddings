@@ -25,6 +25,7 @@ from .runtime_paths import (
 from .tokenization import (
     ALL_CAPS,
     FIRST_CAP,
+    MIXED_CASE,
     NO_CAP,
     capitalization_ids_from_offsets,
     capitalization_ids_from_words,
@@ -39,6 +40,7 @@ __all__ = [
     "BenchmarkSpec",
     "CapitalizedMLMTrainer",
     "FIRST_CAP",
+    "MIXED_CASE",
     "NO_CAP",
     "CapitalizedBertConfig",
     "CapitalizedBertForMaskedLM",

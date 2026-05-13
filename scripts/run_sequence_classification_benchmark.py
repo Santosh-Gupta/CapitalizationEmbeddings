@@ -410,6 +410,7 @@ def run_one_model(
     model_name = model_spec["model_name"]
     is_capitalized = model_spec["kind"] == "capitalized"
     checkpoint = checkpoint_for_model(model_key, model_spec, args)
+    use_mixed_case = checkpoint_uses_mixed_case(checkpoint) if is_capitalized else False
     tokenizer_name = checkpoint or model_name
     output_dir = output_root / model_key / f"seed_{args.seed}"
     is_regression = spec.task_type == "sequence_regression"
@@ -427,6 +428,7 @@ def run_one_model(
             label_to_id=label_to_id,
             max_length=args.max_length,
             capitalized=is_capitalized,
+            use_mixed_case=use_mixed_case,
             regression=is_regression,
         ),
         batched=True,
@@ -617,6 +619,7 @@ def tokenize_examples(
     label_to_id: dict[str, int] | None,
     max_length: int,
     capitalized: bool,
+    use_mixed_case: bool = False,
     regression: bool,
 ) -> dict[str, Any]:
     from capitalization_embeddings import tokenize_with_capitalization
@@ -628,6 +631,7 @@ def tokenize_examples(
             texts,
             truncation=True,
             max_length=max_length,
+            use_mixed_case=use_mixed_case,
         )
     else:
         tokenized = tokenizer(
@@ -655,6 +659,15 @@ def classification_label_id(label: Any, label_to_id: dict[str, int] | None) -> i
     if 0 <= label_id < len(label_to_id):
         return label_id
     raise KeyError(f"Unknown label {label!r}.")
+
+
+def checkpoint_uses_mixed_case(checkpoint: str) -> bool:
+    if not checkpoint:
+        return False
+    from capitalization_embeddings import CapitalizedBertConfig
+
+    config = CapitalizedBertConfig.from_pretrained(checkpoint)
+    return int(getattr(config, "capitalization_vocab_size", 3)) >= 4
 
 
 def merge_text_columns(

@@ -20,18 +20,21 @@ class Capitalization(IntEnum):
     NONE = 0
     FIRST_CAP = 1
     ALL_CAPS = 2
+    MIXED_CASE = 3
 
 
 NO_CAP = int(Capitalization.NONE)
 FIRST_CAP = int(Capitalization.FIRST_CAP)
 ALL_CAPS = int(Capitalization.ALL_CAPS)
+MIXED_CASE = int(Capitalization.MIXED_CASE)
 
 
-def classify_capitalization(text: str) -> int:
+def classify_capitalization(text: str, *, use_mixed_case: bool = False) -> int:
     """Classify a source word/span into the capitalization feature vocabulary.
 
-    Mixed-case words such as `iPhone`, `eBay`, and `McDonald` intentionally
-    route to `NONE` for the first experiment.
+    Mixed-case words such as `iPhone`, `eBay`, and `McDonald` route to `NONE`
+    for the original three-class experiment, or to `MIXED_CASE` for the
+    four-class variant.
     """
 
     letters = [char for char in text if char.isalpha()]
@@ -43,6 +46,9 @@ def classify_capitalization(text: str) -> int:
 
     if letters[0].isupper() and all(char.islower() for char in letters[1:]):
         return FIRST_CAP
+
+    if use_mixed_case and any(char.isupper() for char in letters):
+        return MIXED_CASE
 
     return NO_CAP
 
@@ -65,6 +71,8 @@ def capitalization_ids_from_offsets(
     text: str,
     offsets: Sequence[tuple[int, int]] | Sequence[list[int]],
     special_tokens_mask: Sequence[int] | None = None,
+    *,
+    use_mixed_case: bool = False,
 ) -> list[int]:
     """Build per-token capitalization IDs from fast-tokenizer offsets."""
 
@@ -81,7 +89,9 @@ def capitalization_ids_from_offsets(
             continue
 
         source_span = _expand_to_nonspace_span(text, start, end)
-        capitalization_ids.append(classify_capitalization(source_span))
+        capitalization_ids.append(
+            classify_capitalization(source_span, use_mixed_case=use_mixed_case)
+        )
 
     return capitalization_ids
 
@@ -89,10 +99,15 @@ def capitalization_ids_from_offsets(
 def capitalization_ids_from_words(
     words: Sequence[str],
     word_ids: Sequence[int | None],
+    *,
+    use_mixed_case: bool = False,
 ) -> list[int]:
     """Build per-token capitalization IDs from tokenizer `word_ids` output."""
 
-    word_capitalization = [classify_capitalization(word) for word in words]
+    word_capitalization = [
+        classify_capitalization(word, use_mixed_case=use_mixed_case)
+        for word in words
+    ]
     return [
         NO_CAP if word_id is None else word_capitalization[int(word_id)]
         for word_id in word_ids
@@ -113,6 +128,7 @@ def tokenize_with_capitalization(
     *,
     is_split_into_words: bool = False,
     keep_offsets_mapping: bool = False,
+    use_mixed_case: bool = False,
     return_tensors: str | None = None,
     **tokenizer_kwargs: Any,
 ) -> BatchEncoding:
@@ -126,6 +142,8 @@ def tokenize_with_capitalization(
         is_split_into_words: Pass through to the tokenizer for token
             classification datasets such as CoNLL-2003.
         keep_offsets_mapping: Keep tokenizer offsets in the returned encoding.
+        use_mixed_case: Emit a fourth `MIXED_CASE` capitalization ID for spans
+            such as `iPhone` and `McDonald`.
         return_tensors: Optional Hugging Face tensor type such as `"pt"`.
         **tokenizer_kwargs: Forwarded to the tokenizer.
 
@@ -155,7 +173,11 @@ def tokenize_with_capitalization(
         is_batched = _is_batched_split_words(text)
         word_batches = text if is_batched else [text]
         cap_batches = [
-            capitalization_ids_from_words(words, encoding.word_ids(batch_index=batch_index))
+            capitalization_ids_from_words(
+                words,
+                encoding.word_ids(batch_index=batch_index),
+                use_mixed_case=use_mixed_case,
+            )
             for batch_index, words in enumerate(word_batches)
         ]
     else:
@@ -165,6 +187,13 @@ def tokenize_with_capitalization(
         special_batches = special_tokens_mask if is_batched else [special_tokens_mask]
         cap_batches = [
             capitalization_ids_from_offsets(source_text, offsets, special_mask)
+            if not use_mixed_case
+            else capitalization_ids_from_offsets(
+                source_text,
+                offsets,
+                special_mask,
+                use_mixed_case=True,
+            )
             for source_text, offsets, special_mask in zip(
                 text_batches,
                 offsets_batches,

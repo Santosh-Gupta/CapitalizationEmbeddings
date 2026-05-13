@@ -63,9 +63,21 @@ def parse_args() -> argparse.Namespace:
         "--capitalization-class-weights",
         default="",
         help=(
-            "Optional comma-separated class weights for none,first-cap,all-caps "
-            "capitalization labels. Example: 1,2,8."
+            "Optional comma-separated class weights for capitalization labels. "
+            "Use three values for none,first-cap,all-caps or four values when "
+            "--use-mixed-case-capitalization is enabled."
         ),
+    )
+    parser.add_argument(
+        "--use-mixed-case-capitalization",
+        action="store_true",
+        help="Use a fourth mixed-case capitalization class for iPhone/eBay-style spans.",
+    )
+    parser.add_argument(
+        "--capitalization-embedding-dropout",
+        type=float,
+        default=0.0,
+        help="Dropout applied to capitalization embeddings during training.",
     )
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--max-train-samples", type=int, default=0)
@@ -163,6 +175,10 @@ def main() -> None:
         row["capitalization_class_weights"] = parse_class_weights(
             args.capitalization_class_weights,
         )
+        row["use_mixed_case_capitalization"] = bool(args.use_mixed_case_capitalization)
+        row["capitalization_embedding_dropout"] = float(
+            args.capitalization_embedding_dropout
+        )
     row.update(flatten_metrics(eval_metrics))
     write_json(output_root / "pretraining_metrics.json", row)
     print(json.dumps(row, indent=2, sort_keys=True))
@@ -222,6 +238,7 @@ def load_and_tokenize_corpus(args: argparse.Namespace, tokenizer: Any) -> tuple[
                 examples[text_column],
                 truncation=True,
                 max_length=args.max_length,
+                use_mixed_case=args.use_mixed_case_capitalization,
             )
         return tokenizer(
             examples[text_column],
@@ -476,7 +493,9 @@ def capitalization_config_overrides(args: argparse.Namespace | None) -> dict[str
     if args is None:
         return {}
     return {
+        "capitalization_vocab_size": 4 if args.use_mixed_case_capitalization else 3,
         "capitalization_loss_weight": args.capitalization_loss_weight,
+        "capitalization_embedding_dropout": args.capitalization_embedding_dropout,
         "capitalization_class_weights": parse_class_weights(
             args.capitalization_class_weights,
         ),
@@ -487,10 +506,9 @@ def parse_class_weights(value: str) -> list[float] | None:
     if not value:
         return None
     weights = [float(part.strip()) for part in value.split(",") if part.strip()]
-    if len(weights) != 3:
+    if len(weights) not in {3, 4}:
         raise ValueError(
-            "--capitalization-class-weights must contain exactly three values: "
-            "none,first-cap,all-caps."
+            "--capitalization-class-weights must contain three or four values."
         )
     return weights
 

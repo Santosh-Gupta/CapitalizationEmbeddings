@@ -77,9 +77,9 @@ class ModelingTests(unittest.TestCase):
             )
 
     def test_masked_lm_forward_accepts_capitalization_ids(self):
-        model = CapitalizedBertForMaskedLM(tiny_config())
+        model = CapitalizedBertForMaskedLM(tiny_config(capitalization_vocab_size=4))
         input_ids = torch.tensor([[2, 10, 11, 12, 3]])
-        capitalization_ids = torch.tensor([[0, 1, 0, 2, 0]])
+        capitalization_ids = torch.tensor([[0, 1, 3, 2, 0]])
         labels = torch.tensor([[-100, 10, -100, 12, -100]])
         capitalization_labels = torch.tensor([[-100, 1, -100, 2, -100]])
 
@@ -92,10 +92,16 @@ class ModelingTests(unittest.TestCase):
         )
 
         self.assertEqual(tuple(outputs.logits.shape), (1, 5, 101))
-        self.assertEqual(tuple(outputs.capitalization_logits.shape), (1, 5, 3))
+        self.assertEqual(tuple(outputs.capitalization_logits.shape), (1, 5, 4))
         self.assertIsNotNone(outputs.loss)
         self.assertIsNotNone(outputs.token_loss)
         self.assertIsNotNone(outputs.capitalization_loss)
+
+    def test_config_keeps_capitalization_embedding_dropout(self):
+        config = tiny_config(capitalization_embedding_dropout=0.2)
+        model = CapitalizedBertModel(config, add_pooling_layer=False)
+
+        self.assertEqual(model.config.capitalization_embedding_dropout, 0.2)
 
     def test_token_classifier_forward_accepts_capitalization_ids(self):
         model = CapitalizedBertForTokenClassification(tiny_config())
