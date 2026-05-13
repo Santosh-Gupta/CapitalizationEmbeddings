@@ -10,12 +10,19 @@ import random
 from pathlib import Path
 from typing import Any
 
+import torch
+
 
 MODEL_SPECS = {
     "uncased": {"kind": "baseline", "model_name": "bert-base-uncased"},
     "cased": {"kind": "baseline", "model_name": "bert-base-cased"},
     "capitalized": {"kind": "capitalized", "model_name": "bert-base-uncased"},
 }
+CAPITALIZATION_STATE_KEYS = (
+    "bert.embeddings.capitalization_embeddings.weight",
+    "capitalization_classifier.weight",
+    "capitalization_classifier.bias",
+)
 
 CORPUS_CHOICES = (
     "wikitext103",
@@ -208,6 +215,7 @@ def load_model_and_tokenizer(
                 config=config,
                 ignore_mismatched_sizes=True,
             )
+            restore_overlapping_capitalization_state(model, initial_checkpoint)
         else:
             model = CapitalizedBertForMaskedLM.from_uncased_pretrained(
                 model_spec["model_name"],
@@ -216,6 +224,116 @@ def load_model_and_tokenizer(
     else:
         model = AutoModelForMaskedLM.from_pretrained(initial_checkpoint or model_spec["model_name"])
     return tokenizer, model
+
+
+def restore_overlapping_capitalization_state(model: Any, checkpoint: str) -> None:
+    state = load_checkpoint_tensors(checkpoint, set(CAPITALIZATION_STATE_KEYS))
+    if not state:
+        return
+
+    parameters = dict(model.named_parameters())
+    restored: dict[str, list[int]] = {}
+    with torch.no_grad():
+        for key in CAPITALIZATION_STATE_KEYS:
+            source = state.get(key)
+            target = parameters.get(key)
+            if source is None or target is None or source.ndim != target.ndim:
+                continue
+            common_shape = tuple(
+                min(source_dimension, target_dimension)
+                for source_dimension, target_dimension in zip(source.shape, target.shape)
+            )
+            slices = tuple(slice(0, dimension) for dimension in common_shape)
+            target.data[slices].copy_(
+                source[slices].to(device=target.device, dtype=target.dtype)
+            )
+            restored[key] = list(common_shape)
+
+    if restored:
+        print(
+            "Restored overlapping capitalization checkpoint tensors: "
+            + json.dumps(restored, sort_keys=True),
+            flush=True,
+        )
+
+
+def load_checkpoint_tensors(checkpoint: str, keys: set[str]) -> dict[str, torch.Tensor]:
+    path = Path(checkpoint)
+    if not path.exists():
+        return {}
+
+    if path.is_file():
+        return load_checkpoint_file(path, keys)
+
+    simple_files = (
+        path / "model.safetensors",
+        path / "pytorch_model.bin",
+    )
+    for checkpoint_file in simple_files:
+        if checkpoint_file.exists():
+            return load_checkpoint_file(checkpoint_file, keys)
+
+    indexed_files = (
+        (path / "model.safetensors.index.json", True),
+        (path / "pytorch_model.bin.index.json", False),
+    )
+    for index_path, is_safetensors in indexed_files:
+        if index_path.exists():
+            return load_indexed_checkpoint_tensors(
+                index_path,
+                keys,
+                is_safetensors=is_safetensors,
+            )
+
+    return {}
+
+
+def load_indexed_checkpoint_tensors(
+    index_path: Path,
+    keys: set[str],
+    *,
+    is_safetensors: bool,
+) -> dict[str, torch.Tensor]:
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    weight_map = index.get("weight_map", {})
+    shard_names = sorted({weight_map[key] for key in keys if key in weight_map})
+
+    tensors: dict[str, torch.Tensor] = {}
+    for shard_name in shard_names:
+        shard = load_checkpoint_file(
+            index_path.parent / shard_name,
+            {key for key in keys if weight_map.get(key) == shard_name},
+            is_safetensors=is_safetensors,
+        )
+        tensors.update(shard)
+    return tensors
+
+
+def load_checkpoint_file(
+    checkpoint_file: Path,
+    keys: set[str],
+    *,
+    is_safetensors: bool | None = None,
+) -> dict[str, torch.Tensor]:
+    if is_safetensors is None:
+        is_safetensors = checkpoint_file.suffix == ".safetensors"
+
+    if is_safetensors:
+        from safetensors.torch import load_file
+
+        state = load_file(str(checkpoint_file), device="cpu")
+    else:
+        state = torch.load(checkpoint_file, map_location="cpu")
+        if isinstance(state, dict) and "state_dict" in state:
+            state = state["state_dict"]
+
+    if not isinstance(state, dict):
+        return {}
+    return {
+        key: value.detach().cpu()
+        for key, value in state.items()
+        if key in keys and isinstance(value, torch.Tensor)
+    }
 
 
 def load_and_tokenize_corpus(args: argparse.Namespace, tokenizer: Any) -> tuple[Any, Any]:
