@@ -23,14 +23,15 @@ word_embedding(input_ids)
 Current feature vocabulary:
 
 ```text
-0 = no capitalization feature / lowercase / mixed case / special token
+0 = no capitalization feature / lowercase / special token
 1 = first-cap word, e.g. Tom
 2 = all-caps word, e.g. TOM, NASA
+3 = mixed-case word, e.g. iPhone, eBay, McDonald
 ```
 
-Mixed-case words such as `iPhone`, `eBay`, and `McDonald` intentionally route to
-`0` in the first experiment. A later ablation can add a fourth `MIXED_CASE`
-feature if needed.
+The first experiment routed mixed-case words such as `iPhone`, `eBay`, and
+`McDonald` to `0`. The current best variant adds the fourth `MIXED_CASE`
+feature and uses capitalization embedding dropout during continued pretraining.
 
 ## Repo Layout
 
@@ -48,6 +49,13 @@ notebooks/
 tests/
   test_tokenization.py
 ```
+
+## Experiment Status
+
+The current evidence ledger is maintained in
+[PAPER_EVIDENCE_STATUS.md](PAPER_EVIDENCE_STATUS.md). It records the current
+best checkpoint family, benchmark roots, completed multi-seed results, negative
+results, and the remaining statistical work needed before paper submission.
 
 ## Colab Workflow
 

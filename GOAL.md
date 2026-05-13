@@ -24,34 +24,46 @@ This predicts two benchmark families:
 
 ## Current Best Method
 
-Use the real-acronym 3k/lr2e-5 continued-pretraining recipe as the main
-checkpoint family:
+Use the mixed-case/dropout continuation as the current best capitalization
+embedding checkpoint family. It starts from the real-acronym 3k/lr2e-5
+checkpoint and grows the capitalization feature vocabulary from three states to
+four states:
 
 ```text
 corpus: capitalization_real_acronym_mix
 max_steps: 3000
 learning_rate: 2e-5
 capitalization_loss_weight: 0.25
+capitalization_class_weights: [1, 2, 8, 4]
+capitalization_embedding_dropout: 0.1
+capitalization states: none, first-cap, all-caps, mixed-case
 ```
 
 Matched controls must receive the same extra MLM recipe:
 
 ```text
-capitalized: /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/capitalized_from_task_mix_steps3000_lr2e5/final
+capitalized: /workspace/capitalization_embeddings/checkpoints/mlm/mixed_case_dropout/capitalized_from_3class_steps3000_lr2e5_drop01/final
 uncased:     /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_from_task_mix_steps3000_lr2e5/final
 cased:       /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_from_task_mix_steps3000_lr2e5/final
 ```
 
+When expanding the capitalized model from three to four capitalization states,
+rows 0-2 of the capitalization embedding/classifier tables are restored from
+the 3-class checkpoint; only the new mixed-case row is newly initialized.
+
 ## Current Evidence
 
-Single-seed discovery results are encouraging but not paper-grade.
+Single-seed and 3/5-seed discovery results are encouraging but not paper-grade
+until paired-bootstrap/Holm-corrected summaries are generated.
 
 Cased-favored tasks:
 
-- CoNLL-2003 NER: capitalized beats matched cased and uncased.
-- WNUT-17 NER: capitalized beats matched cased and uncased.
-- OntoNotes v5 NER: capitalized beats matched uncased and nearly matches cased.
-- PTB POS: capitalized beats matched uncased and nearly matches cased.
+- CoNLL-2003 NER: mixed-case capitalized beats matched cased and uncased.
+- WNUT-17 NER: mixed-case capitalized beats matched cased and uncased.
+- OntoNotes v5 NER: mixed-case capitalized beats matched uncased and nearly
+  matches cased.
+- PTB POS: mixed-case capitalized beats matched uncased and nearly matches
+  cased.
 
 Uncased-favored tasks:
 
@@ -103,14 +115,12 @@ Additional candidates:
 
 ## Active Work Queue
 
-1. Make benchmark runners fully multi-seed-safe.
-2. Run a 5-seed confirmation sweep on the strongest and cheapest tasks first:
-   WNUT-17, CoNLL-2003, TweetEval Irony, TweetEval Offensive, SST-5, and
-   20 Newsgroups.
-3. Run paired bootstrap significance tests for the 5-seed sweep.
-4. Rerun STS-B on validation with the regression fix.
-5. Smoke-test SemEval18/SciERC relation classification on RunPod, then add the
-   clean scientific relation tasks to the multi-seed queue.
-6. Decide whether Yahoo Answers should be full-dataset, sampled, or omitted from
-   the first submission table.
-7. If the 5-seed sweep holds, expand to 10 seeds for headline tasks.
+1. Expand the mixed-case token-task sweep from 3 seeds to at least 5 seeds for
+   CoNLL-2003, WNUT-17, OntoNotes v5, and PTB POS.
+2. Run paired bootstrap significance tests for the completed 3/5-seed sweeps.
+3. Add ablations for 3-class versus 4-class mixed-case versus mixed-case +
+   capitalization embedding dropout.
+4. Decide which sequence/scientific benchmarks belong in the main paper table
+   versus appendix/negative-control tables.
+5. If the headline token-task sweep holds, expand WNUT and any high-variance
+   headline tasks to 20-30 seeds.

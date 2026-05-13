@@ -6,8 +6,9 @@ both training-seed replication and paired test-set uncertainty.
 
 ## Primary Comparisons
 
-Use the real-acronym 3k/lr2e-5 continued-pretraining checkpoints as the main
-method unless a later checkpoint beats it under matched controls.
+Use the mixed-case/dropout checkpoint as the main method unless a later
+checkpoint beats it under matched controls. Use the real-acronym 3k/lr2e-5
+uncased and cased checkpoints as matched continued-pretraining controls.
 
 Primary pairwise comparisons:
 
@@ -28,7 +29,12 @@ For each downstream benchmark:
 4. Report paired bootstrap confidence intervals on the selected test/eval split.
 5. Report paired p-values for the key model comparisons.
 
-Recommended final setting: 10 seeds for headline tables if compute allows.
+Recommended final setting:
+
+- 5 seeds minimum for every headline table row.
+- 10 seeds for tasks where the mean effect is small but central to the claim.
+- 20-30 seeds only for high-variance headline comparisons such as WNUT-17 where
+  the current mean is positive but seed variance is large.
 
 ## Tests
 
@@ -66,6 +72,10 @@ Use these labels in the paper:
 - `tie`: 95% paired bootstrap CI includes 0 and absolute mean delta is below a
   pre-declared practical threshold.
 - `loss`: mean delta negative and 95% paired bootstrap CI excludes 0.
+
+For "match cased" claims, use an equivalence/non-inferiority framing instead
+of treating "not significant" as a tie. The practical threshold below should be
+declared before final runs and used consistently.
 
 Suggested practical thresholds:
 
