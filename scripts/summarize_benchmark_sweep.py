@@ -20,6 +20,7 @@ from paired_significance import (
 
 
 MODEL_ORDER = ("uncased_pretrained", "cased_pretrained", "capitalized_pretrained")
+BASELINE_MODELS = ("uncased_pretrained", "cased_pretrained")
 COMPARISONS = (
     ("capitalized_pretrained", "uncased_pretrained"),
     ("capitalized_pretrained", "cased_pretrained"),
@@ -30,6 +31,16 @@ COMPARISONS = (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", required=True, type=Path)
+    parser.add_argument(
+        "--baseline-results-roots",
+        nargs="*",
+        type=Path,
+        default=[],
+        help=(
+            "Optional sweep roots to read uncased_pretrained/cased_pretrained "
+            "rows from when the primary root contains only a capitalized variant."
+        ),
+    )
     parser.add_argument("--benchmarks", nargs="+", required=True)
     parser.add_argument(
         "--metric",
@@ -50,7 +61,7 @@ def main() -> None:
         "metric": args.metric,
         "benchmarks": [
             summarize_benchmark(
-                args.results_root,
+                [args.results_root, *args.baseline_results_roots],
                 benchmark,
                 metric=args.metric,
                 bootstrap_samples=args.bootstrap_samples,
@@ -73,15 +84,14 @@ def main() -> None:
 
 
 def summarize_benchmark(
-    results_root: Path,
+    results_roots: list[Path],
     benchmark: str,
     *,
     metric: str,
     bootstrap_samples: int,
     seed: int,
 ) -> dict[str, Any]:
-    results_file = results_root / benchmark / "results.jsonl"
-    rows = [json.loads(line) for line in results_file.read_text().splitlines() if line.strip()]
+    rows = load_rows(results_roots, benchmark)
     values = defaultdict(list)
     prediction_files = defaultdict(dict)
 
@@ -112,10 +122,36 @@ def summarize_benchmark(
 
     return {
         "benchmark": benchmark,
+        "results_roots": [str(root) for root in results_roots],
         "rows": len(rows),
         "models": model_summaries,
         "comparisons": comparisons,
     }
+
+
+def load_rows(results_roots: list[Path], benchmark: str) -> list[dict[str, Any]]:
+    rows = []
+    seen = set()
+    for root_index, results_root in enumerate(results_roots):
+        results_file = results_root / benchmark / "results.jsonl"
+        if not results_file.exists():
+            continue
+        for line in results_file.read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            model_key = row.get("model_key")
+            if root_index > 0 and model_key not in BASELINE_MODELS:
+                continue
+            key = (model_key, row.get("seed"))
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(row)
+    if not rows:
+        roots = ", ".join(str(root) for root in results_roots)
+        raise FileNotFoundError(f"No rows found for benchmark {benchmark!r} in {roots}.")
+    return rows
 
 
 def metric_value(row: dict[str, Any], metric: str) -> float:
