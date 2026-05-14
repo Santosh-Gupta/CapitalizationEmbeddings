@@ -91,14 +91,14 @@ twenty_newsgroups
 
 ### Paper Final High-Variance 20-Seed Expansion
 
-Status: running.
+Status: stopped early; partial results retained.
 
 Started: 2026-05-14 UTC.
 
 RunPod PID:
 
 ```text
-60740
+60740 (exited)
 ```
 
 Purpose:
@@ -161,4 +161,48 @@ tweet_eval_irony
 tweet_eval_offensive
 sst5
 twenty_newsgroups
+```
+
+Partial completion observed on 2026-05-14 UTC:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/mixed_case_eval_3seed
+  conll2003_ner capitalized_pretrained: 20 seeds
+  wnut17_ner capitalized_pretrained: 20 seeds
+
+/workspace/capitalization_embeddings/checkpoints/significance_5seed
+  conll2003_ner uncased_pretrained: 20 seeds
+  conll2003_ner cased_pretrained: 20 seeds
+  wnut17_ner uncased_pretrained: 13 seeds
+  wnut17_ner cased_pretrained: 13 seeds
+  selected sequence tasks: 5 seeds/model
+
+/workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed
+  selected sequence tasks capitalized_pretrained: 5 seeds
+```
+
+### Paper Final Missing 20-Seed Remainder
+
+Status: queued for immediate RunPod launch.
+
+Purpose:
+
+- Fill only rows missing from the previous expansion, without rerunning completed
+  CoNLL or current-best WNUT rows.
+- Complete WNUT-17 cased/uncased controls to 20 seeds.
+- Complete the selected sequence task current-best capitalized rows to 20 seeds.
+- Complete the selected sequence task cased/uncased controls to 20 seeds.
+
+Launcher/log:
+
+```text
+/workspace/repos/CapitalizationEmbeddings/scripts/run_paper_final_missing_20seed_remainder.sh
+/workspace/capitalization_embeddings/logs/paper_final_missing_20seed_remainder.log
+```
+
+Result roots:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/significance_5seed
+/workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed
 ```
