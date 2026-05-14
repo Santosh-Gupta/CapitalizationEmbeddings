@@ -8,8 +8,9 @@ before making top-tier conference or journal claims.
 
 ## Current Answer
 
-We do not yet have an iron-clad paper package. We do have a strong and
-publishable-looking core result:
+We now have the main GPU-heavy 20-seed evidence package for the current best
+method. It is not an "iron-clad universal dominance" result, but it is a
+defensible paper package if the claim is scoped carefully:
 
 ```text
 Capitalization embeddings recover most of the benefit of cased BERT on
@@ -17,14 +18,18 @@ capitalization-sensitive token tasks while keeping the lexical sharing of an
 uncased vocabulary.
 ```
 
-The current evidence is strongest for cased-favored token tasks. The mixed-case
-capitalization variant beats matched uncased controls on all four required token
-benchmarks. Against matched cased controls, it wins by mean on CoNLL-2003,
-WNUT-17, and PTB POS, and is effectively tied on OntoNotes v5.
+The current evidence is strongest for cased-favored token tasks. With 20 seeds,
+the mixed-case capitalization variant beats matched uncased on CoNLL-2003 with
+Holm-corrected significance and has positive but high-variance mean deltas on
+WNUT-17. Against matched cased controls it is best framed as a tie/near-cased
+result, not a statistically significant win.
 
-The current evidence is not strong enough for a broad "strictly better than
-cased and uncased BERT" claim. Some uncased-favored and cased-favored sequence
-benchmarks are misses.
+For selected uncased-favored sequence tasks, the current best method does not
+hurt uncased performance in a statistically detectable way: SST-5 and 20
+Newsgroups are practical ties against uncased, and TweetEval Irony/Offensive are
+positive by mean but not significant. Some other sequence/scientific diagnostics
+remain negative, so avoid a broad "strictly better than cased and uncased BERT"
+claim.
 
 ## Current Best Method
 
@@ -176,11 +181,58 @@ Bootstrap reports:
 
 Current status:
 
-- The current best mixed-case method now has 5 seeds on the required token
-  benchmarks and four selected uncased-favored sequence benchmarks.
+- The current best mixed-case method has 20 seeds on CoNLL-2003, WNUT-17, and
+  four selected uncased-favored sequence benchmarks.
+- Matched cased/uncased controls have 20 seeds for CoNLL-2003, WNUT-17,
+  TweetEval Irony, TweetEval Offensive, SST-5, and 20 Newsgroups.
+- OntoNotes v5 and PTB POS remain 5-seed results for current-best and matched
+  controls; they are low-variance tie/non-inferiority evidence, not headline
+  20-seed significance evidence.
 - Per-example prediction files are saved for completed runs, so paired bootstrap
   tests are feasible.
-- Final paired bootstrap/Holm-corrected tables have not yet been generated.
+- Final paired bootstrap/Holm-corrected tables have been generated for the
+  current 20-seed token/sequence headline set.
+
+Final 20-seed reports:
+
+```text
+/workspace/capitalization_embeddings/reports/final_token_20seed_ner_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/final_token_20seed_holm.md
+/workspace/capitalization_embeddings/reports/final_sequence_20seed_macro_f1_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/final_sequence_20seed_accuracy_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/final_sequence_20seed_holm.md
+```
+
+20-seed headline table:
+
+| Benchmark | Metric | Uncased | Cased | Capitalized | Cap-Uncased | Cap-Cased | Holm label |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| CoNLL-2003 NER | entity F1 | 0.9040 +/- 0.0025 | 0.9119 +/- 0.0035 | 0.9165 +/- 0.0018 | +0.0125 | +0.0045 | win vs uncased, tie vs cased |
+| WNUT-17 NER | entity F1 | 0.4424 +/- 0.0152 | 0.4426 +/- 0.0100 | 0.4495 +/- 0.0103 | +0.0071 | +0.0069 | tie vs both |
+| TweetEval Irony | macro-F1 | 0.6702 +/- 0.0135 | 0.6591 +/- 0.0144 | 0.6788 +/- 0.0092 | +0.0086 | +0.0197 | tie vs both |
+| TweetEval Offensive | macro-F1 | 0.8034 +/- 0.0091 | 0.7966 +/- 0.0073 | 0.8099 +/- 0.0065 | +0.0066 | +0.0133 | tie vs both |
+| SST-5 | accuracy | 0.5410 +/- 0.0039 | 0.5283 +/- 0.0084 | 0.5407 +/- 0.0068 | -0.0003 | +0.0124 | tie vs both |
+| 20 Newsgroups | accuracy | 0.7055 +/- 0.0028 | 0.6939 +/- 0.0023 | 0.7047 +/- 0.0031 | -0.0008 | +0.0108 | tie vs uncased; positive vs cased but not Holm-significant |
+
+Holm-corrected significant result:
+
+```text
+CoNLL-2003 cap > uncased:
+delta +0.012525, bootstrap CI95 [+0.003364, +0.019591],
+raw p = 0.0086, Holm p = 0.0344.
+```
+
+Important non-significant but useful results:
+
+```text
+WNUT-17:
+cap is positive by mean vs both baselines, but high variance keeps it a tie.
+
+Selected uncased-favored sequence tasks:
+cap matches uncased within the predeclared 0.002 practical threshold on SST-5
+and 20 Newsgroups; it is positive by mean on TweetEval Irony/Offensive, but not
+significant after bootstrap/Holm.
+```
 
 Approximate seed-level/bootstrap status from current paired seed deltas:
 
@@ -209,7 +261,7 @@ For top-tier claims, use these labels:
   practical threshold.
 - `loss`: mean delta negative and bootstrap CI excludes 0.
 
-Predeclare practical equivalence thresholds before the final sweep:
+Practical equivalence thresholds used for the final 20-seed Holm reports:
 
 ```text
 F1/accuracy headline threshold: 0.002 absolute
@@ -220,23 +272,22 @@ Regression/correlation threshold: 0.002 absolute
 
 Minimum next steps:
 
-1. Report Holm-Bonferroni-corrected significance within the token-task family.
-2. Add an ablation table comparing:
+1. Add an ablation table comparing:
    - 3-class capitalization embeddings
    - 4-class mixed-case capitalization embeddings
    - 4-class + capitalization embedding dropout
    - matched cased and matched uncased controls
-3. Add parameter/memory accounting:
+2. Add parameter/memory accounting:
    - cased vocabulary embedding parameters
    - uncased vocabulary embedding parameters
    - capitalization embedding overhead
    - actual saved model size and training/inference throughput if available
-4. Add an error analysis:
+3. Add an error analysis:
    - first-cap entities
    - all-caps acronyms
    - mixed-case words such as `iPhone`
    - tokens where cased wins and cap embeddings lose
-5. Write a locked experimental protocol:
+4. Write a locked experimental protocol:
    - datasets and splits
    - model-selection rule
    - seeds
@@ -247,13 +298,14 @@ Minimum next steps:
 
 Best compute allocation:
 
-- Run up to 20-30 seeds only for the high-variance headline comparisons, mainly
-  WNUT and TweetEval-style tasks.
-- Use 5-10 seeds for low-variance tasks such as OntoNotes and PTB, where the
-  result is already stable.
-- Do not spend 20-30 seeds trying to turn stable losses into wins. OntoNotes
-  and PTB currently support "near-cased / equivalent within a small margin,"
-  not "beats cased."
+- No more GPU sweeps are needed for the current decision gate.
+- If more compute is purchased, spend it on ablations or method improvements,
+  not on repeating the completed 20-seed selected sequence controls.
+- WNUT remains high variance at 20 seeds. Expanding to 30 seeds may tighten the
+  estimate, but the current result already supports a tie/positive-mean framing;
+  it is unlikely to create an iron-clad universal dominance claim by itself.
+- OntoNotes and PTB currently support "near-cased / equivalent within a small
+  margin," not "beats cased."
 
 ## Recommended Paper Claim
 
@@ -275,9 +327,9 @@ Recommended claims to avoid unless future runs change the evidence:
 
 ## Immediate Work Queue
 
-1. Apply Holm-Bonferroni correction to the generated bootstrap p-values.
-2. Decide whether WNUT should be expanded to 20-30 seeds because the observed
-   cap-vs-cased delta is positive but high variance.
-3. Add ablation runs for mixed-case/dropout vs 3-class under the same seeds.
-4. Convert this ledger into a paper table and appendix table once final stats
-   are available.
+1. Convert the final 20-seed ledger into paper-ready main and appendix tables.
+2. Add ablation rows for mixed-case/dropout vs 3-class where they matter.
+3. Add parameter, memory, and throughput accounting.
+4. Add qualitative error analysis for capitalization categories.
+5. Decide whether to run 30-seed WNUT only if the paper needs a narrower
+   WNUT-specific claim.

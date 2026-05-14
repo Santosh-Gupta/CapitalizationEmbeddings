@@ -321,7 +321,7 @@ Notes:
 
 ### Paper Final Foreground Sequence Control Resume
 
-Status: running.
+Status: completed.
 
 Started: 2026-05-14 UTC.
 
@@ -413,10 +413,49 @@ twenty_newsgroups cased_pretrained: 9
 
 Next action:
 
-1. Do not launch another `tweet_eval_offensive` resume while PID 12218 exists.
-2. Poll `pgrep`, `nvidia-smi`, and result counts.
-3. `sst5` and `twenty_newsgroups` have their own active foreground sessions as
-   of 2026-05-14 UTC; do not duplicate those tasks unless their sessions exit.
-4. If any process exits before its selected controls reach 20 seeds, rerun the
-   same foreground/idempotent command for that task; completed
-   `(task, model, seed)` rows will be skipped.
+Final counts:
+
+```text
+tweet_eval_offensive uncased_pretrained: 20
+tweet_eval_offensive cased_pretrained: 20
+sst5 uncased_pretrained: 20
+sst5 cased_pretrained: 20
+twenty_newsgroups uncased_pretrained: 20
+twenty_newsgroups cased_pretrained: 20
+```
+
+Duplicate check:
+
+```text
+No duplicate (model_key, seed) rows in the three completed selected sequence
+control files.
+```
+
+Final reports generated:
+
+```text
+/workspace/capitalization_embeddings/reports/final_token_20seed_ner_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/final_token_20seed_holm.md
+/workspace/capitalization_embeddings/reports/final_sequence_20seed_macro_f1_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/final_sequence_20seed_accuracy_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/final_sequence_20seed_holm.md
+```
+
+Cleanup:
+
+```text
+Deleted disposable /workspace/capitalization_embeddings/checkpoints/benchmarks
+after reports were generated. Compact JSONL metrics and prediction files remain
+under their result roots.
+```
+
+Final RunPod state:
+
+```text
+GPU idle: NVIDIA GeForce RTX 4090, 0 %, 1 MiB / 24564 MiB
+No run_sequence_classification, resume_benchmark_sweep, summarize_benchmark_sweep,
+or apply_holm processes remain.
+```
+
+The GPU pod can be stopped after this point if no further interactive work is
+needed.

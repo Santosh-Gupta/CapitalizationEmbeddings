@@ -1,0 +1,132 @@
+{
+  "benchmarks": [
+    {
+      "benchmark": "conll2003_ner",
+      "comparisons": [
+        {
+          "a": "capitalized_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            0.0033635077704621515,
+            0.019591043622483196
+          ],
+          "bootstrap_p_two_sided": 0.0086,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.012525403382647122,
+          "seed_delta_std": 0.002831887029714115
+        },
+        {
+          "a": "capitalized_pretrained",
+          "b": "cased_pretrained",
+          "bootstrap_ci95": [
+            -0.005488434231884567,
+            0.018058687570957386
+          ],
+          "bootstrap_p_two_sided": 0.2936,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.004536936112915652,
+          "seed_delta_std": 0.00427748602926193
+        },
+        {
+          "a": "cased_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.0069754986731890315,
+            0.01646230566942301
+          ],
+          "bootstrap_p_two_sided": 0.1235,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.007988467269731469,
+          "seed_delta_std": 0.004099689171378811
+        }
+      ],
+      "models": {
+        "capitalized_pretrained": {
+          "mean": 0.9164837927550995,
+          "n": 20,
+          "std": 0.0018208429987833063
+        },
+        "cased_pretrained": {
+          "mean": 0.9119468566421839,
+          "n": 20,
+          "std": 0.0035315683242713386
+        },
+        "uncased_pretrained": {
+          "mean": 0.9039583893724522,
+          "n": 20,
+          "std": 0.0025438810720541604
+        }
+      },
+      "results_roots": [
+        "/workspace/capitalization_embeddings/checkpoints/mixed_case_eval_3seed",
+        "/workspace/capitalization_embeddings/checkpoints/significance_5seed"
+      ],
+      "rows": 60
+    },
+    {
+      "benchmark": "wnut17_ner",
+      "comparisons": [
+        {
+          "a": "capitalized_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.03143696923735418,
+            0.04796131539558557
+          ],
+          "bootstrap_p_two_sided": 0.7288,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.007102779586562374,
+          "seed_delta_std": 0.01597178848914232
+        },
+        {
+          "a": "capitalized_pretrained",
+          "b": "cased_pretrained",
+          "bootstrap_ci95": [
+            -0.02999815931180294,
+            0.04302397412995443
+          ],
+          "bootstrap_p_two_sided": 0.7233,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.006909739812349036,
+          "seed_delta_std": 0.013252352477586667
+        },
+        {
+          "a": "cased_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.038152829908713756,
+            0.04161725887714639
+          ],
+          "bootstrap_p_two_sided": 0.9941,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.0001930397742133383,
+          "seed_delta_std": 0.014113066825203009
+        }
+      ],
+      "models": {
+        "capitalized_pretrained": {
+          "mean": 0.4494819923474065,
+          "n": 20,
+          "std": 0.010278821523874118
+        },
+        "cased_pretrained": {
+          "mean": 0.4425722525350575,
+          "n": 20,
+          "std": 0.010044263045273123
+        },
+        "uncased_pretrained": {
+          "mean": 0.44237921276084424,
+          "n": 20,
+          "std": 0.015166180365482175
+        }
+      },
+      "results_roots": [
+        "/workspace/capitalization_embeddings/checkpoints/mixed_case_eval_3seed",
+        "/workspace/capitalization_embeddings/checkpoints/significance_5seed"
+      ],
+      "rows": 60
+    }
+  ],
+  "metric": "seqeval_f1",
+  "results_root": "/workspace/capitalization_embeddings/checkpoints/mixed_case_eval_3seed"
+}

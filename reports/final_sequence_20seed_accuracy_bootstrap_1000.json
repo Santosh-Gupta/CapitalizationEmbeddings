@@ -1,0 +1,132 @@
+{
+  "benchmarks": [
+    {
+      "benchmark": "sst5",
+      "comparisons": [
+        {
+          "a": "capitalized_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.02126696832579178,
+            0.018099547511312264
+          ],
+          "bootstrap_p_two_sided": 1.0,
+          "n_seeds": 20,
+          "seed_delta_mean": -0.00033936651583710287,
+          "seed_delta_std": 0.0066613294597917564
+        },
+        {
+          "a": "capitalized_pretrained",
+          "b": "cased_pretrained",
+          "bootstrap_ci95": [
+            -0.015837104072398245,
+            0.03981900452488696
+          ],
+          "bootstrap_p_two_sided": 0.3839,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.012352941176470577,
+          "seed_delta_std": 0.010632191983427033
+        },
+        {
+          "a": "cased_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.03755656108597283,
+            0.010407239819004599
+          ],
+          "bootstrap_p_two_sided": 0.3279,
+          "n_seeds": 20,
+          "seed_delta_mean": -0.01269230769230768,
+          "seed_delta_std": 0.00805763609203648
+        }
+      ],
+      "models": {
+        "capitalized_pretrained": {
+          "mean": 0.5406787330316741,
+          "n": 20,
+          "std": 0.006830694213126934
+        },
+        "cased_pretrained": {
+          "mean": 0.5283257918552036,
+          "n": 20,
+          "std": 0.00835432120844145
+        },
+        "uncased_pretrained": {
+          "mean": 0.5410180995475112,
+          "n": 20,
+          "std": 0.003926290657954175
+        }
+      },
+      "results_roots": [
+        "/workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed",
+        "/workspace/capitalization_embeddings/checkpoints/significance_5seed"
+      ],
+      "rows": 60
+    },
+    {
+      "benchmark": "twenty_newsgroups",
+      "comparisons": [
+        {
+          "a": "capitalized_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.00982474774296338,
+            0.008364312267657992
+          ],
+          "bootstrap_p_two_sided": 0.8316,
+          "n_seeds": 20,
+          "seed_delta_mean": -0.0008430695698353585,
+          "seed_delta_std": 0.0035563249593529474
+        },
+        {
+          "a": "capitalized_pretrained",
+          "b": "cased_pretrained",
+          "bootstrap_ci95": [
+            0.0013276686139139793,
+            0.019383961763143942
+          ],
+          "bootstrap_p_two_sided": 0.0285,
+          "n_seeds": 20,
+          "seed_delta_mean": 0.010760754115772713,
+          "seed_delta_std": 0.00260221443996529
+        },
+        {
+          "a": "cased_pretrained",
+          "b": "uncased_pretrained",
+          "bootstrap_ci95": [
+            -0.021109930961232037,
+            -0.0014604354753053883
+          ],
+          "bootstrap_p_two_sided": 0.0252,
+          "n_seeds": 20,
+          "seed_delta_mean": -0.011603823685608073,
+          "seed_delta_std": 0.003294454746932762
+        }
+      ],
+      "models": {
+        "capitalized_pretrained": {
+          "mean": 0.7046933085501859,
+          "n": 20,
+          "std": 0.0030767541349527726
+        },
+        "cased_pretrained": {
+          "mean": 0.693932554434413,
+          "n": 20,
+          "std": 0.0022943792583127185
+        },
+        "uncased_pretrained": {
+          "mean": 0.7055363781200212,
+          "n": 20,
+          "std": 0.002806808394336811
+        }
+      },
+      "results_roots": [
+        "/workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed",
+        "/workspace/capitalization_embeddings/checkpoints/significance_5seed"
+      ],
+      "rows": 60
+    }
+  ],
+  "metric": "accuracy",
+  "results_root": "/workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed"
+}
