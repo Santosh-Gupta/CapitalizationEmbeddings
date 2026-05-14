@@ -183,14 +183,14 @@ Partial completion observed on 2026-05-14 UTC:
 
 ### Paper Final Missing 20-Seed Remainder
 
-Status: running.
+Status: stopped after WNUT completion; sequence remainder moved to parallel launcher.
 
 Started: 2026-05-14 UTC.
 
 RunPod PID:
 
 ```text
-69736
+69736 (exited after WNUT controls reached 20/20)
 ```
 
 Purpose:
@@ -226,3 +226,30 @@ resume sequence work with:
 The parallel launcher runs one worker per selected sequence task. Each worker
 uses `resume_benchmark_sweep.py`, so partial rows written by the serial launcher
 are skipped.
+
+### Paper Final Sequence 20-Seed Parallel Remainder
+
+Status: running.
+
+Started: 2026-05-14 UTC.
+
+RunPod PID:
+
+```text
+71455
+```
+
+Launcher/log:
+
+```text
+/workspace/repos/CapitalizationEmbeddings/scripts/run_paper_final_sequence_parallel.sh
+/workspace/capitalization_embeddings/logs/paper_final_sequence_parallel.log
+/workspace/capitalization_embeddings/logs/sequence_parallel/*.log
+```
+
+Notes:
+
+- One orphaned serial `tweet_eval_irony` child briefly overlapped with the new
+  parallel worker and was killed.
+- `tweet_eval_irony` results were checked immediately afterward; no duplicate
+  `(model_key, seed)` rows were present.
