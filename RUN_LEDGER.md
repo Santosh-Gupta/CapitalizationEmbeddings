@@ -229,7 +229,7 @@ are skipped.
 
 ### Paper Final Sequence 20-Seed Parallel Remainder
 
-Status: running.
+Status: unknown; SSH endpoint became unreachable during polling.
 
 Started: 2026-05-14 UTC.
 
@@ -253,3 +253,19 @@ Notes:
   parallel worker and was killed.
 - `tweet_eval_irony` results were checked immediately afterward; no duplicate
   `(model_key, seed)` rows were present.
+- Last successful poll, before SSH failure, showed GPU at 100% utilization and:
+
+```text
+mixed_case_sequence_5seed
+  tweet_eval_irony capitalized_pretrained: 20 seeds
+  tweet_eval_offensive capitalized_pretrained: 9 seeds
+  sst5 capitalized_pretrained: 11 seeds
+  twenty_newsgroups capitalized_pretrained: 9 seeds
+
+significance_5seed selected sequence tasks:
+  uncased_pretrained/cased_pretrained/capitalized_pretrained: 5 seeds each
+```
+
+- The next poll failed with direct TCP `Connection refused`; the old RunPod SSH
+  proxy command rejected the key. Check the RunPod UI for whether the pod
+  stopped/restarted or whether the SSH endpoint changed.
