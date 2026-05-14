@@ -201,6 +201,8 @@ Final 20-seed reports:
 /workspace/capitalization_embeddings/reports/final_sequence_20seed_macro_f1_bootstrap_1000.md
 /workspace/capitalization_embeddings/reports/final_sequence_20seed_accuracy_bootstrap_1000.md
 /workspace/capitalization_embeddings/reports/final_sequence_20seed_holm.md
+reports/seed_level_significance_margin002_project35.md
+reports/seed_level_significance_margin005_project35.md
 ```
 
 20-seed headline table:
@@ -233,6 +235,27 @@ cap matches uncased within the predeclared 0.002 practical threshold on SST-5
 and 20 Newsgroups; it is positive by mean on TweetEval Irony/Offensive, but not
 significant after bootstrap/Holm.
 ```
+
+Seed-level significance and matching:
+
+- Treat random seed as the replicated unit for the main fine-tuning stability
+  analysis.
+- Use superiority tests for "beats" claims.
+- Use non-inferiority to the better baseline for "matches the best baseline"
+  claims. Strict equivalence is stronger and is not the right label when the
+  capitalized model is meaningfully better than one baseline.
+- With a 0.002 margin, current 20-seed seed-level tests support non-inferiority
+  to the better baseline for CoNLL, WNUT, TweetEval Irony, and TweetEval
+  Offensive. They do not yet support 0.002-margin non-inferiority for SST-5 or
+  20 Newsgroups.
+- With a 0.005 margin, current 20-seed seed-level tests support
+  non-inferiority to the better baseline for all six 20-seed headline
+  benchmarks.
+- Projecting from current 20-seed seed variances to 35 seeds, superiority is
+  plausible for CoNLL-vs-cased, WNUT-vs-cased, TweetEval Irony-vs-uncased, and
+  TweetEval Offensive-vs-uncased. A 0.002-margin non-inferiority claim for SST-5
+  and 20 Newsgroups is not likely to be secured by 35 seeds; the projection is
+  closer to roughly 100 and 59 seeds respectively.
 
 Approximate seed-level/bootstrap status from current paired seed deltas:
 
