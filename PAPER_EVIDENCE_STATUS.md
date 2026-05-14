@@ -75,6 +75,13 @@ previous checkpoint and only the new mixed-case row is newly initialized.
 /workspace/capitalization_embeddings/checkpoints/required_token_baselines_3seed
 ```
 
+Regenerate an evidence ledger from the current JSONL files with:
+
+```bash
+python scripts/collect_evidence_status.py \
+  --checkpoint-root /workspace/capitalization_embeddings/checkpoints
+```
+
 Do not report `/workspace/capitalization_embeddings/checkpoints/scientific_5seed/semeval2018_task7`
 as a final benchmark result; that run produced all-zero values. Use
 `semeval2018_validation_5seed/semeval2018_task7` for the corrected validation
