@@ -214,3 +214,15 @@ Result roots:
 /workspace/capitalization_embeddings/checkpoints/significance_5seed
 /workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed
 ```
+
+If WNUT completes and the remaining sequence work is still serial and GPU
+utilization remains low, stop the serial launcher after a clean row boundary and
+resume sequence work with:
+
+```text
+/workspace/repos/CapitalizationEmbeddings/scripts/run_paper_final_sequence_parallel.sh
+```
+
+The parallel launcher runs one worker per selected sequence task. Each worker
+uses `resume_benchmark_sweep.py`, so partial rows written by the serial launcher
+are skipped.
