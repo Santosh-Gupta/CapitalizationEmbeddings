@@ -7,6 +7,7 @@ after context compression.
 
 ```text
 host: root@203.57.40.173 -p 10267
+current host after redeploy: root@203.57.40.158 -p 10019
 repo: /workspace/repos/CapitalizationEmbeddings
 checkpoint root: /workspace/capitalization_embeddings/checkpoints
 log root: /workspace/capitalization_embeddings/logs
@@ -269,3 +270,50 @@ significance_5seed selected sequence tasks:
 - The next poll failed with direct TCP `Connection refused`; the old RunPod SSH
   proxy command rejected the key. Check the RunPod UI for whether the pod
   stopped/restarted or whether the SSH endpoint changed.
+
+### Paper Final Sequence 20-Seed Parallel Resume After Redeploy
+
+Status: running.
+
+Started: 2026-05-14 UTC.
+
+RunPod host:
+
+```text
+root@203.57.40.158 -p 10019
+```
+
+RunPod PID:
+
+```text
+1959
+```
+
+Launcher/log:
+
+```text
+/workspace/repos/CapitalizationEmbeddings/scripts/run_paper_final_sequence_parallel.sh
+/workspace/capitalization_embeddings/logs/paper_final_sequence_parallel_resume_after_deps.log
+/workspace/capitalization_embeddings/logs/sequence_parallel/*.log
+```
+
+Redeploy state before resume:
+
+```text
+mixed_case_sequence_5seed
+  tweet_eval_irony capitalized_pretrained: 20 seeds
+  tweet_eval_offensive capitalized_pretrained: 13 seeds
+  sst5 capitalized_pretrained: 15 seeds
+  twenty_newsgroups capitalized_pretrained: 13 seeds
+
+significance_5seed
+  tweet_eval_irony uncased_pretrained: 12 seeds
+  tweet_eval_irony cased_pretrained: 11 seeds
+  selected remaining sequence tasks: 5 seeds/model
+```
+
+Notes:
+
+- Fresh container was missing Python dependencies; first relaunch failed with
+  `ModuleNotFoundError: transformers`.
+- Installed `requirements-colab.txt` and `pip install -e .`, then relaunched.
