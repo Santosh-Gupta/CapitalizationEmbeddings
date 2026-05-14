@@ -273,7 +273,8 @@ significance_5seed selected sequence tasks:
 
 ### Paper Final Sequence 20-Seed Parallel Resume After Redeploy
 
-Status: running.
+Status: superseded by foreground/idempotent resume after detached launch
+instability and disk-quota cleanup.
 
 Started: 2026-05-14 UTC.
 
@@ -317,3 +318,101 @@ Notes:
 - Fresh container was missing Python dependencies; first relaunch failed with
   `ModuleNotFoundError: transformers`.
 - Installed `requirements-colab.txt` and `pip install -e .`, then relaunched.
+
+### Paper Final Foreground Sequence Control Resume
+
+Status: running.
+
+Started: 2026-05-14 UTC.
+
+RunPod host:
+
+```text
+root@203.57.40.158 -p 10019
+```
+
+Active process observed after local SSH stream disconnect:
+
+```text
+resume_benchmark_sweep.py PID 12218
+run_sequence_classification_benchmark.py PID 12734
+```
+
+Command:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+python -u scripts/resume_benchmark_sweep.py \
+  --results-root /workspace/capitalization_embeddings/checkpoints/significance_5seed \
+  --models uncased_pretrained cased_pretrained \
+  --uncased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_from_task_mix_steps3000_lr2e5/final \
+  --cased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_from_task_mix_steps3000_lr2e5/final \
+  --capitalized-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/mixed_case_dropout/capitalized_from_3class_steps3000_lr2e5_drop01/final \
+  --seeds 144 233 377 610 987 1597 2584 4181 6765 10946 17711 28657 46368 75025 121393 \
+  --token-tasks \
+  --sequence-tasks tweet_eval_offensive sst5 twenty_newsgroups \
+  --sequence-epochs 3 \
+  --sequence-batch-size 16 \
+  --sequence-learning-rate 2e-5 \
+  --no-save-model
+```
+
+Pre-run blocker and fix:
+
+- Two foreground resume attempts failed with `OSError: [Errno 122] Disk quota
+  exceeded` during `evaluate` metric finalization.
+- Root cause was disposable Trainer output directories under
+  `/workspace/capitalization_embeddings/checkpoints/benchmarks`, about 173 GB.
+- The compact result files are under task roots such as
+  `/workspace/capitalization_embeddings/checkpoints/significance_5seed/<task>/results.jsonl`;
+  those were retained.
+- Cleanup command used:
+
+```bash
+pkill -f 'run_sequence_classification_benchmark.py' || true
+rm -rf /workspace/capitalization_embeddings/checkpoints/benchmarks
+mkdir -p /workspace/capitalization_embeddings/checkpoints/benchmarks
+rm -rf /workspace/.cache/huggingface/evaluate /root/.cache/huggingface/evaluate /tmp/* || true
+```
+
+Important: `/workspace/capitalization_embeddings/checkpoints/benchmarks` is
+disposable per-seed Trainer output. Do not rely on it for final metrics.
+
+Counts immediately before this foreground resume:
+
+```text
+mixed_case_sequence_5seed
+  tweet_eval_irony capitalized_pretrained: 20
+  tweet_eval_offensive capitalized_pretrained: 20
+  sst5 capitalized_pretrained: 20
+  twenty_newsgroups capitalized_pretrained: 20
+
+significance_5seed
+  tweet_eval_irony uncased_pretrained: 20
+  tweet_eval_irony cased_pretrained: 20
+  tweet_eval_offensive uncased_pretrained: 9
+  tweet_eval_offensive cased_pretrained: 9
+  sst5 uncased_pretrained: 13
+  sst5 cased_pretrained: 13
+  twenty_newsgroups uncased_pretrained: 10
+  twenty_newsgroups cased_pretrained: 9
+```
+
+Counts after SSH stream disconnected, while remote process was still running:
+
+```text
+tweet_eval_offensive uncased_pretrained: 12
+tweet_eval_offensive cased_pretrained: 11
+sst5 uncased_pretrained: 13
+sst5 cased_pretrained: 13
+twenty_newsgroups uncased_pretrained: 10
+twenty_newsgroups cased_pretrained: 9
+```
+
+Next action:
+
+1. Do not launch duplicates while PID 12218 exists.
+2. Poll `pgrep`, `nvidia-smi`, and result counts.
+3. If the process exits before all selected controls reach 20 seeds, rerun the
+   same foreground/idempotent command; completed `(task, model, seed)` rows will
+   be skipped.
