@@ -1,6 +1,6 @@
 # Paper Evidence Status
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 This file is the durable project ledger for paper readiness. It summarizes what
 is supported by completed runs, what is still preliminary, and what must be run
@@ -19,8 +19,8 @@ uncased vocabulary.
 
 The current evidence is strongest for cased-favored token tasks. The mixed-case
 capitalization variant beats matched uncased controls on all four required token
-benchmarks and beats matched cased controls on CoNLL-2003 and WNUT-17. It is
-slightly below matched cased on OntoNotes v5 and PTB POS.
+benchmarks. Against matched cased controls, it wins by mean on CoNLL-2003,
+WNUT-17, and PTB POS, and is effectively tied on OntoNotes v5.
 
 The current evidence is not strong enough for a broad "strictly better than
 cased and uncased BERT" claim. Some uncased-favored and cased-favored sequence
@@ -68,11 +68,19 @@ previous checkpoint and only the new mixed-case row is newly initialized.
 5-seed SciEntsBank diagnostics:
 /workspace/capitalization_embeddings/checkpoints/scientbank_5seed
 
-3-seed mixed-case token task run:
+Mixed-case token task run, now expanded to 5 seeds despite the historical path
+name:
 /workspace/capitalization_embeddings/checkpoints/mixed_case_eval_3seed
 
-3-seed matched cased/uncased controls for missing token tasks:
+Matched cased/uncased controls for OntoNotes/PTB, now expanded to 5 seeds
+despite the historical path name:
 /workspace/capitalization_embeddings/checkpoints/required_token_baselines_3seed
+
+Mixed-case sequence run for current-best method:
+/workspace/capitalization_embeddings/checkpoints/mixed_case_sequence_5seed
+
+Bootstrap/statistical reports:
+/workspace/capitalization_embeddings/reports
 ```
 
 Regenerate an evidence ledger from the current JSONL files with:
@@ -94,30 +102,40 @@ whether capitalization embeddings recover cased-model behavior.
 
 | Benchmark | Metric | Capitalized mixed | Matched cased | Matched uncased | Current read |
 | --- | --- | ---: | ---: | ---: | --- |
-| CoNLL-2003 NER | entity F1 | 0.916688 +/- 0.001804, n=3 | 0.913101 +/- 0.001531, n=5 | 0.902421 +/- 0.003327, n=5 | cap > cased > uncased |
-| WNUT-17 NER | entity F1 | 0.452720 +/- 0.001595, n=3 | 0.441257 +/- 0.012031, n=5 | 0.437926 +/- 0.019077, n=5 | cap > cased ~= uncased |
-| OntoNotes v5 NER | entity F1 | 0.888038 +/- 0.000927, n=3 | 0.889740 +/- 0.000797, n=3 | 0.873323 +/- 0.000152, n=3 | cased > cap > uncased |
-| PTB POS | accuracy | 0.977312 +/- 0.000040, n=3 | 0.977497 +/- 0.000150, n=3 | 0.973159 +/- 0.000424, n=3 | cased slightly > cap > uncased |
+| CoNLL-2003 NER | entity F1 | 0.915800 +/- 0.002013, n=5 | 0.913101 +/- 0.001531, n=5 | 0.902421 +/- 0.003327, n=5 | cap > cased > uncased |
+| WNUT-17 NER | entity F1 | 0.452072 +/- 0.001681, n=5 | 0.441257 +/- 0.012031, n=5 | 0.437926 +/- 0.019077, n=5 | cap > cased ~= uncased |
+| OntoNotes v5 NER | entity F1 | 0.887593 +/- 0.001624, n=5 | 0.888170 +/- 0.003293, n=5 | 0.872913 +/- 0.001348, n=5 | cap ~= cased > uncased |
+| PTB POS | accuracy | 0.977179 +/- 0.000199, n=5 | 0.977100 +/- 0.000569, n=5 | 0.973149 +/- 0.000386, n=5 | cap ~= cased > uncased |
 
 Interpretation:
 
 - The primary "beats uncased where case matters" claim is supported on all four
   required token benchmarks.
-- The stretch "beats cased" claim is supported on CoNLL and WNUT only.
-- OntoNotes and PTB need equivalence-style framing against cased, not a win
-  framing, unless a later method flips them.
+- Bootstrap reports support significant cap-over-uncased wins on CoNLL,
+  OntoNotes, and PTB. WNUT has a positive mean but remains high variance at
+  five seeds.
+- Against cased, the correct paper framing is "matches cased, sometimes wins";
+  bootstrap intervals include zero for CoNLL, OntoNotes, and PTB, and WNUT is
+  positive by mean but not significant at five seeds.
+
+Bootstrap reports:
+
+```text
+/workspace/capitalization_embeddings/reports/mixed_case_token_ner_bootstrap_1000_fast.md
+/workspace/capitalization_embeddings/reports/mixed_case_ptb_bootstrap_10000.md
+```
 
 ## Other Completed Benchmarks
 
 These are useful, but they should be positioned carefully because they contain
 both positive and negative evidence.
 
-| Benchmark | Metric | Capitalized 3-class | Matched cased | Matched uncased | Current read |
+| Benchmark | Metric | Capitalized mixed/current-best | Matched cased | Matched uncased | Current read |
 | --- | --- | ---: | ---: | ---: | --- |
-| SST-5 | accuracy | 0.543258 +/- 0.004709, n=5 | 0.528326 +/- 0.008475, n=5 | 0.539910 +/- 0.002922, n=5 | cap > uncased > cased |
-| TweetEval Irony | macro-F1 | 0.671319 +/- 0.009187, n=5 | 0.656121 +/- 0.015872, n=5 | 0.667333 +/- 0.016625, n=5 | cap > uncased > cased, high variance |
-| TweetEval Offensive | macro-F1 | 0.810214 +/- 0.010833, n=5 | 0.792561 +/- 0.004841, n=5 | 0.799580 +/- 0.010435, n=5 | cap > uncased > cased |
-| 20 Newsgroups | accuracy | 0.705098 +/- 0.001824, n=5 | 0.693999 +/- 0.002180, n=5 | 0.706320 +/- 0.002480, n=5 | uncased > cap > cased |
+| SST-5 | accuracy | 0.544253 +/- 0.002548, n=5 | 0.528326 +/- 0.008475, n=5 | 0.539910 +/- 0.002922, n=5 | cap > uncased > cased, not significant |
+| TweetEval Irony | macro-F1 | 0.675807 +/- 0.012560, n=5 | 0.656121 +/- 0.015872, n=5 | 0.667333 +/- 0.016625, n=5 | cap > uncased > cased, not significant |
+| TweetEval Offensive | macro-F1 | 0.806396 +/- 0.006190, n=5 | 0.792561 +/- 0.004841, n=5 | 0.799580 +/- 0.010435, n=5 | cap > uncased > cased, not significant |
+| 20 Newsgroups | accuracy | 0.704965 +/- 0.001271, n=5 | 0.693999 +/- 0.002180, n=5 | 0.706320 +/- 0.002480, n=5 | cap ~= uncased > cased |
 | TREC Fine | accuracy | 0.820400 +/- 0.007925, n=5 | 0.836000 +/- 0.005099, n=5 | 0.829600 +/- 0.008877, n=5 | cap underperforms both |
 | TweetEval Emoji | accuracy | 0.369396 +/- 0.002440, n=5 | 0.453884 +/- 0.002073, n=5 | 0.369372 +/- 0.003103, n=5 | cased dominates; cap ~= uncased |
 | SciERC relations | accuracy | 0.844353 +/- 0.010585, n=5 | 0.843326 +/- 0.010832, n=5 | 0.861602 +/- 0.010174, n=5 | uncased dominates |
@@ -136,28 +154,35 @@ Interpretation:
   be reported honestly as limitations or omitted from the main table and kept in
   an appendix if the paper's stated scope is token-level capitalization.
 
+Bootstrap reports:
+
+```text
+/workspace/capitalization_embeddings/reports/mixed_case_sequence_macro_f1_bootstrap_10000.md
+/workspace/capitalization_embeddings/reports/mixed_case_sequence_accuracy_bootstrap_10000.md
+```
+
 ## Statistical Readiness
 
 Current status:
 
-- Several tasks have 5 fine-tuning seeds, but the current best mixed-case method
-  has only 3 seeds on the required token benchmarks.
+- The current best mixed-case method now has 5 seeds on the required token
+  benchmarks and four selected uncased-favored sequence benchmarks.
 - Per-example prediction files are saved for completed runs, so paired bootstrap
   tests are feasible.
 - Final paired bootstrap/Holm-corrected tables have not yet been generated.
 
-Approximate seed-level power estimates from current paired seed deltas:
+Approximate seed-level/bootstrap status from current paired seed deltas:
 
 | Comparison | Observed mean delta | Paired-seed SD | Rough n for 80% power | Read |
 | --- | ---: | ---: | ---: | --- |
-| mixed CoNLL cap - cased | +0.002573 | 0.001858 | 5 | 5 seeds may be enough |
-| mixed CoNLL cap - uncased | +0.012550 | 0.003328 | 1 | already large |
-| mixed WNUT cap - cased | +0.009302 | 0.015532 | 22 | needs many seeds |
-| mixed WNUT cap - uncased | +0.019614 | 0.021697 | 10 | 10-20 seeds likely useful |
-| mixed OntoNotes cap - cased | -0.001702 | 0.000306 | 1 | stable small loss, not a win |
-| mixed OntoNotes cap - uncased | +0.014715 | 0.000925 | 1 | already large |
-| mixed PTB cap - cased | -0.000184 | 0.000132 | 4 | stable tiny loss, should frame as tie/equivalence |
-| mixed PTB cap - uncased | +0.004153 | 0.000464 | 1 | already large |
+| mixed CoNLL cap - cased | +0.002699 | 0.002558 | 8 | bootstrap CI includes 0 |
+| mixed CoNLL cap - uncased | +0.013379 | 0.003922 | 1 | bootstrap significant |
+| mixed WNUT cap - cased | +0.010816 | 0.012729 | 11 | high variance; not significant |
+| mixed WNUT cap - uncased | +0.014146 | 0.020252 | 17 | high variance; not significant |
+| mixed OntoNotes cap - cased | -0.000577 | 0.003299 | 257 | tie/non-inferiority framing |
+| mixed OntoNotes cap - uncased | +0.014680 | 0.002421 | 1 | bootstrap significant |
+| mixed PTB cap - cased | +0.000079 | 0.000677 | 575 | tie/non-inferiority framing |
+| mixed PTB cap - uncased | +0.004030 | 0.000397 | 1 | bootstrap significant |
 
 These are rough seed-count estimates, not final significance tests. Final
 claims should use both:
@@ -184,25 +209,23 @@ Regression/correlation threshold: 0.002 absolute
 
 Minimum next steps:
 
-1. Expand the mixed-case method to 5 seeds on CoNLL, WNUT, OntoNotes, and PTB.
-2. Run paired bootstrap summaries for the four required token tasks.
-3. Report Holm-Bonferroni-corrected significance within the token-task family.
-4. Add an ablation table comparing:
+1. Report Holm-Bonferroni-corrected significance within the token-task family.
+2. Add an ablation table comparing:
    - 3-class capitalization embeddings
    - 4-class mixed-case capitalization embeddings
    - 4-class + capitalization embedding dropout
    - matched cased and matched uncased controls
-5. Add parameter/memory accounting:
+3. Add parameter/memory accounting:
    - cased vocabulary embedding parameters
    - uncased vocabulary embedding parameters
    - capitalization embedding overhead
    - actual saved model size and training/inference throughput if available
-6. Add an error analysis:
+4. Add an error analysis:
    - first-cap entities
    - all-caps acronyms
    - mixed-case words such as `iPhone`
    - tokens where cased wins and cap embeddings lose
-7. Write a locked experimental protocol:
+5. Write a locked experimental protocol:
    - datasets and splits
    - model-selection rule
    - seeds
@@ -241,11 +264,9 @@ Recommended claims to avoid unless future runs change the evidence:
 
 ## Immediate Work Queue
 
-1. Generate final paired-bootstrap summaries for the completed 3-seed token
-   runs.
-2. Expand mixed-case token tasks to 5 seeds.
-3. Decide whether WNUT should be expanded to 20-30 seeds because the observed
+1. Apply Holm-Bonferroni correction to the generated bootstrap p-values.
+2. Decide whether WNUT should be expanded to 20-30 seeds because the observed
    cap-vs-cased delta is positive but high variance.
-4. Add ablation runs for mixed-case/dropout vs 3-class under the same seeds.
-5. Convert this ledger into a paper table and appendix table once final stats
+3. Add ablation runs for mixed-case/dropout vs 3-class under the same seeds.
+4. Convert this ledger into a paper table and appendix table once final stats
    are available.

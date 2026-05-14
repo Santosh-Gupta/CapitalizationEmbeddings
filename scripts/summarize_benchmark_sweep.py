@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from paired_significance import (
+    bio_entities,
     load_predictions,
     score,
     validate_pairs,
@@ -190,31 +191,54 @@ def summarize_comparison(
     for run_seed in shared_seeds:
         records_a = load_predictions(Path(prediction_files[model_a][run_seed]))
         records_b = load_predictions(Path(prediction_files[model_b][run_seed]))
-        validate_pairs(records_a, records_b)
+        validate_prediction_pairs(records_a, records_b, metric=metric)
         seed_deltas.append(score(records_a, metric) - score(records_b, metric))
-        bootstrap_deltas.extend(
-            bootstrap_pair_deltas(
-                records_a,
-                records_b,
-                metric=metric,
-                samples=bootstrap_samples,
-                seed=seed + run_seed,
+        if bootstrap_samples:
+            bootstrap_deltas.extend(
+                bootstrap_pair_deltas(
+                    records_a,
+                    records_b,
+                    metric=metric,
+                    samples=bootstrap_samples,
+                    seed=seed + run_seed,
+                )
             )
-        )
 
     bootstrap_deltas.sort()
+    bootstrap_ci95 = (
+        [
+            percentile(bootstrap_deltas, 2.5),
+            percentile(bootstrap_deltas, 97.5),
+        ]
+        if bootstrap_deltas
+        else [math.nan, math.nan]
+    )
     return {
         "a": model_a,
         "b": model_b,
         "n_seeds": len(shared_seeds),
         "seed_delta_mean": sum(seed_deltas) / len(seed_deltas),
         "seed_delta_std": statistics.stdev(seed_deltas) if len(seed_deltas) > 1 else 0.0,
-        "bootstrap_ci95": [
-            percentile(bootstrap_deltas, 2.5),
-            percentile(bootstrap_deltas, 97.5),
-        ],
+        "bootstrap_ci95": bootstrap_ci95,
         "bootstrap_p_two_sided": two_sided_p_value(bootstrap_deltas),
     }
+
+
+def validate_prediction_pairs(
+    records_a: list[dict[str, Any]],
+    records_b: list[dict[str, Any]],
+    *,
+    metric: str,
+) -> None:
+    if metric != "seqeval_f1":
+        validate_pairs(records_a, records_b)
+        return
+
+    if len(records_a) != len(records_b):
+        raise ValueError(f"Prediction files have different lengths: {len(records_a)} != {len(records_b)}")
+    for offset, (record_a, record_b) in enumerate(zip(records_a, records_b, strict=True)):
+        if record_a.get("index") != record_b.get("index"):
+            raise ValueError(f"Example index mismatch at row {offset}.")
 
 
 def bootstrap_pair_deltas(
@@ -229,6 +253,36 @@ def bootstrap_pair_deltas(
 
     rng = random.Random(seed)
     n = len(records_a)
+    if metric == "accuracy":
+        return bootstrap_count_deltas(
+            accuracy_count_records(records_a),
+            accuracy_count_records(records_b),
+            samples=samples,
+            seed=seed,
+        )
+    if metric == "seqeval_f1":
+        return bootstrap_count_deltas(
+            seqeval_count_records(records_a),
+            seqeval_count_records(records_b),
+            samples=samples,
+            seed=seed,
+            scorer=f1_from_counts,
+        )
+    if metric == "macro_f1":
+        labels = sorted(
+            {record["label"] for record in records_a}
+            | {record["prediction"] for record in records_a}
+            | {record["label"] for record in records_b}
+            | {record["prediction"] for record in records_b}
+        )
+        return bootstrap_count_deltas(
+            macro_f1_count_records(records_a, labels),
+            macro_f1_count_records(records_b, labels),
+            samples=samples,
+            seed=seed,
+            scorer=macro_f1_from_counts,
+        )
+
     deltas = []
     for _ in range(samples):
         indices = [rng.randrange(n) for _ in range(n)]
@@ -236,6 +290,108 @@ def bootstrap_pair_deltas(
         sample_b = [records_b[index] for index in indices]
         deltas.append(score(sample_a, metric) - score(sample_b, metric))
     return deltas
+
+
+def bootstrap_count_deltas(
+    counts_a: list[tuple[float, ...]],
+    counts_b: list[tuple[float, ...]],
+    *,
+    samples: int,
+    seed: int,
+    scorer=None,
+) -> list[float]:
+    import random
+
+    if scorer is None:
+        scorer = count_accuracy
+
+    rng = random.Random(seed)
+    n = len(counts_a)
+    deltas = []
+    for _ in range(samples):
+        summed_a = [0.0] * len(counts_a[0])
+        summed_b = [0.0] * len(counts_b[0])
+        for _ in range(n):
+            index = rng.randrange(n)
+            for offset, value in enumerate(counts_a[index]):
+                summed_a[offset] += value
+            for offset, value in enumerate(counts_b[index]):
+                summed_b[offset] += value
+        deltas.append(scorer(tuple(summed_a)) - scorer(tuple(summed_b)))
+    return deltas
+
+
+def accuracy_count_records(records: list[dict[str, Any]]) -> list[tuple[float, float]]:
+    counts = []
+    for record in records:
+        if "labels" in record and "predictions" in record:
+            labels = record["labels"]
+            predictions = record["predictions"]
+            correct = sum(
+                prediction == label
+                for prediction, label in zip(predictions, labels, strict=True)
+            )
+            counts.append((float(correct), float(len(labels))))
+        else:
+            counts.append((float(record["prediction"] == record["label"]), 1.0))
+    return counts
+
+
+def count_accuracy(counts: tuple[float, ...]) -> float:
+    correct, total = counts
+    return correct / total if total else 0.0
+
+
+def seqeval_count_records(records: list[dict[str, Any]]) -> list[tuple[float, float, float]]:
+    counts = []
+    for record in records:
+        predicted_entities = bio_entities(record["predictions"])
+        reference_entities = bio_entities(record["labels"])
+        counts.append(
+            (
+                float(len(predicted_entities & reference_entities)),
+                float(len(predicted_entities)),
+                float(len(reference_entities)),
+            )
+        )
+    return counts
+
+
+def f1_from_counts(counts: tuple[float, ...]) -> float:
+    true_positive, predicted, reference = counts
+    precision = true_positive / predicted if predicted else 0.0
+    recall = true_positive / reference if reference else 0.0
+    return 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+
+
+def macro_f1_count_records(records: list[dict[str, Any]], labels: list[Any]) -> list[tuple[float, ...]]:
+    counts = []
+    for record in records:
+        row = []
+        for label in labels:
+            row.extend(
+                (
+                    float(record["label"] == label and record["prediction"] == label),
+                    float(record["label"] != label and record["prediction"] == label),
+                    float(record["label"] == label and record["prediction"] != label),
+                )
+            )
+        counts.append(tuple(row))
+    return counts
+
+
+def macro_f1_from_counts(counts: tuple[float, ...]) -> float:
+    f1_values = []
+    for offset in range(0, len(counts), 3):
+        true_positive, false_positive, false_negative = counts[offset : offset + 3]
+        precision = true_positive / (true_positive + false_positive) if true_positive + false_positive else 0.0
+        recall = true_positive / (true_positive + false_negative) if true_positive + false_negative else 0.0
+        f1_values.append(
+            2 * precision * recall / (precision + recall)
+            if precision + recall
+            else 0.0
+        )
+    return sum(f1_values) / len(f1_values) if f1_values else 0.0
 
 
 def two_sided_p_value(deltas: list[float]) -> float:

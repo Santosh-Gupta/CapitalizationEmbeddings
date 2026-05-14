@@ -101,6 +101,19 @@ def score(records: list[dict[str, Any]], metric: str) -> float:
 
 
 def accuracy(records: list[dict[str, Any]]) -> float:
+    if records and "labels" in records[0] and "predictions" in records[0]:
+        correct = 0
+        total = 0
+        for record in records:
+            labels = record["labels"]
+            predictions = record["predictions"]
+            correct += sum(
+                prediction == label
+                for prediction, label in zip(predictions, labels, strict=True)
+            )
+            total += len(labels)
+        return correct / total if total else 0.0
+
     correct = sum(record["prediction"] == record["label"] for record in records)
     return correct / len(records)
 
@@ -123,14 +136,54 @@ def macro_f1(records: list[dict[str, Any]]) -> float:
 
 
 def seqeval_f1(records: list[dict[str, Any]]) -> float:
-    import evaluate
+    predicted_count = 0
+    reference_count = 0
+    true_positive_count = 0
+    for record in records:
+        predicted_entities = bio_entities(record["predictions"])
+        reference_entities = bio_entities(record["labels"])
+        predicted_count += len(predicted_entities)
+        reference_count += len(reference_entities)
+        true_positive_count += len(predicted_entities & reference_entities)
 
-    seqeval = evaluate.load("seqeval")
-    result = seqeval.compute(
-        predictions=[record["predictions"] for record in records],
-        references=[record["labels"] for record in records],
-    )
-    return float(result["overall_f1"])
+    precision = true_positive_count / predicted_count if predicted_count else 0.0
+    recall = true_positive_count / reference_count if reference_count else 0.0
+    return 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+
+
+def bio_entities(labels: list[str]) -> set[tuple[str, int, int]]:
+    """Return BIO entity spans as ``(type, start, end_exclusive)`` tuples."""
+
+    entities: set[tuple[str, int, int]] = set()
+    active_type: str | None = None
+    active_start = 0
+
+    for index, label in enumerate([*labels, "O"]):
+        prefix, entity_type = split_bio_label(label)
+        continuing = (
+            prefix == "I"
+            and active_type is not None
+            and entity_type == active_type
+        )
+        if active_type is not None and not continuing:
+            entities.add((active_type, active_start, index))
+            active_type = None
+        if prefix == "B" or (prefix == "I" and not continuing):
+            active_type = entity_type
+            active_start = index
+
+    return entities
+
+
+def split_bio_label(label: str) -> tuple[str, str]:
+    if label == "O" or not label:
+        return "O", ""
+    if "-" not in label:
+        return "B", label
+    prefix, entity_type = label.split("-", 1)
+    if prefix not in {"B", "I"}:
+        return "B", label
+    return prefix, entity_type
 
 
 def pearson(records: list[dict[str, Any]]) -> float:
