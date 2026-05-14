@@ -93,6 +93,20 @@ For every headline benchmark:
 4. Run paired bootstrap tests on identical examples.
 5. Apply Holm-Bonferroni correction within benchmark families.
 
+Additional "iron-clad" completion criteria before declaring GPU work finished:
+
+1. High-variance headline tasks have enough fine-tuning seeds to make the
+   conclusion stable, or are explicitly demoted to appendix/diagnostic status.
+2. WNUT-17 has 20+ seeds for all three matched model families because the
+   five-seed mean favors capitalization embeddings but the confidence interval
+   is still wide.
+3. The strongest uncased-favored sequence tasks have 20+ seeds for all three
+   matched model families, or the paper narrows its main claim to token-level
+   capitalization-sensitive tasks.
+4. Every GPU run has an entry in `RUN_LEDGER.md` before launch and a completion
+   update after results are written.
+5. The RunPod GPU is confirmed idle before telling the user it can be stopped.
+
 Target final headline benchmark set:
 
 - Cased-favored: CoNLL-2003 NER, WNUT-17 NER, OntoNotes v5 NER, PTB POS.
@@ -115,12 +129,23 @@ Additional candidates:
 
 ## Active Work Queue
 
-1. Expand the mixed-case token-task sweep from 3 seeds to at least 5 seeds for
-   CoNLL-2003, WNUT-17, OntoNotes v5, and PTB POS.
-2. Run paired bootstrap significance tests for the completed 3/5-seed sweeps.
+Completed:
+
+- Expanded the mixed-case token-task sweep to 5 seeds for CoNLL-2003,
+  WNUT-17, OntoNotes v5, and PTB POS.
+- Expanded OntoNotes/PTB matched cased and uncased controls to 5 seeds.
+- Ran current-best mixed-case sequence sweeps for TweetEval Irony,
+  TweetEval Offensive, SST-5, and 20 Newsgroups.
+- Generated bootstrap reports for token, PTB, and selected sequence tasks.
+
+Active:
+
+1. Expand high-variance headline tasks to 20 seeds, starting with WNUT-17 and
+   the selected uncased-favored sequence tasks.
+2. Expand CoNLL-2003 to 20 seeds if compute is already active, because its
+   cap-over-cased mean is positive but still not significant at 5 seeds.
 3. Add ablations for 3-class versus 4-class mixed-case versus mixed-case +
    capitalization embedding dropout.
 4. Decide which sequence/scientific benchmarks belong in the main paper table
    versus appendix/negative-control tables.
-5. If the headline token-task sweep holds, expand WNUT and any high-variance
-   headline tasks to 20-30 seeds.
+5. Generate Holm-corrected final tables and update `PAPER_EVIDENCE_STATUS.md`.

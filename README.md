@@ -57,6 +57,9 @@ The current evidence ledger is maintained in
 best checkpoint family, benchmark roots, completed multi-seed results, negative
 results, and the remaining statistical work needed before paper submission.
 
+GPU and CPU experiment batches are tracked in [RUN_LEDGER.md](RUN_LEDGER.md).
+Update that file before launching a run and after it completes.
+
 ## Colab Workflow
 
 Clone or upload this repo to Colab, then run from the repo root:
