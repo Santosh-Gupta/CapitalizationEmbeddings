@@ -90,6 +90,17 @@ python scripts/collect_evidence_status.py \
   --checkpoint-root /workspace/capitalization_embeddings/checkpoints
 ```
 
+Generate paired-bootstrap summaries with `scripts/summarize_benchmark_sweep.py`,
+then apply Holm-Bonferroni correction to one or more summary JSON files with:
+
+```bash
+python scripts/apply_holm_correction.py \
+  /workspace/capitalization_embeddings/reports/<summary>.json \
+  --family token_headline \
+  --output-md /workspace/capitalization_embeddings/reports/<holm_report>.md \
+  --output-json /workspace/capitalization_embeddings/reports/<holm_report>.json
+```
+
 Do not report `/workspace/capitalization_embeddings/checkpoints/scientific_5seed/semeval2018_task7`
 as a final benchmark result; that run produced all-zero values. Use
 `semeval2018_validation_5seed/semeval2018_task7` for the corrected validation
