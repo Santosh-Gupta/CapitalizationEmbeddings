@@ -91,7 +91,15 @@ twenty_newsgroups
 
 ### Paper Final High-Variance 20-Seed Expansion
 
-Status: planned.
+Status: running.
+
+Started: 2026-05-14 UTC.
+
+RunPod PID:
+
+```text
+60740
+```
 
 Purpose:
 
