@@ -331,11 +331,13 @@ RunPod host:
 root@203.57.40.158 -p 10019
 ```
 
-Active process observed after local SSH stream disconnect:
+Active processes observed after local SSH stream disconnect and later
+parallelization:
 
 ```text
 resume_benchmark_sweep.py PID 12218
-run_sequence_classification_benchmark.py PID 12734
+run_sequence_classification_benchmark.py PID 12734/13035 (tweet_eval_offensive)
+additional foreground sessions launched for sst5 and twenty_newsgroups
 ```
 
 Command:
@@ -411,8 +413,10 @@ twenty_newsgroups cased_pretrained: 9
 
 Next action:
 
-1. Do not launch duplicates while PID 12218 exists.
+1. Do not launch another `tweet_eval_offensive` resume while PID 12218 exists.
 2. Poll `pgrep`, `nvidia-smi`, and result counts.
-3. If the process exits before all selected controls reach 20 seeds, rerun the
-   same foreground/idempotent command; completed `(task, model, seed)` rows will
-   be skipped.
+3. `sst5` and `twenty_newsgroups` have their own active foreground sessions as
+   of 2026-05-14 UTC; do not duplicate those tasks unless their sessions exit.
+4. If any process exits before its selected controls reach 20 seeds, rerun the
+   same foreground/idempotent command for that task; completed
+   `(task, model, seed)` rows will be skipped.
