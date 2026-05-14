@@ -183,7 +183,15 @@ Partial completion observed on 2026-05-14 UTC:
 
 ### Paper Final Missing 20-Seed Remainder
 
-Status: queued for immediate RunPod launch.
+Status: running.
+
+Started: 2026-05-14 UTC.
+
+RunPod PID:
+
+```text
+69736
+```
 
 Purpose:
 
