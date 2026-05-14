@@ -151,6 +151,10 @@ def load_benchmark_dataset(dataset_name: str, dataset_config: str | None):
 
 
 def load_prepared_benchmark_dataset(spec: Any, *, seed: int):
+    if spec.processor == "isarcasm_eval_en_task_a":
+        return load_isarcasm_eval_en(seed=seed)
+    if spec.processor == "citation_sentiment_acl":
+        return load_citation_sentiment_acl(seed=seed)
     if spec.processor == "combined_scientific_relations":
         return load_combined_scientific_relations(seed=seed)
     if isinstance(spec.processor, str) and spec.processor.startswith("scientbank_"):
@@ -162,6 +166,58 @@ def load_prepared_benchmark_dataset(spec: Any, *, seed: int):
         return prepare_semeval2018_task7(raw)
     raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
     return raw
+
+
+def load_isarcasm_eval_en(*, seed: int):
+    import pandas as pd
+    from datasets import Dataset, DatasetDict
+
+    train_url = "https://raw.githubusercontent.com/iabufarha/iSarcasmEval/main/train/train.En.csv"
+    test_url = "https://raw.githubusercontent.com/iabufarha/iSarcasmEval/main/test/task_A_En_test.csv"
+    train_frame = pd.read_csv(train_url)[["tweet", "sarcastic"]].rename(
+        columns={"tweet": "text", "sarcastic": "label"}
+    )
+    test_frame = pd.read_csv(test_url)[["text", "sarcastic"]].rename(
+        columns={"sarcastic": "label"}
+    )
+    train_dataset = Dataset.from_pandas(train_frame, preserve_index=False)
+    test_dataset = Dataset.from_pandas(test_frame, preserve_index=False)
+    train_validation = train_dataset.train_test_split(test_size=0.1, seed=seed)
+    return DatasetDict(
+        {
+            "train": train_validation["train"],
+            "validation": train_validation["test"],
+            "test": test_dataset,
+        }
+    )
+
+
+def load_citation_sentiment_acl(*, seed: int):
+    import pandas as pd
+    from datasets import Dataset, DatasetDict
+    from huggingface_hub import hf_hub_download
+
+    path = hf_hub_download(
+        "gaof23/citation_sentiment_corpus",
+        "citation_sentiment_corpus.csv",
+        repo_type="dataset",
+    )
+    frame = pd.read_csv(path)[["Citation_Text", "Sentiment"]].rename(
+        columns={"Citation_Text": "text", "Sentiment": "label"}
+    )
+    frame["label"] = frame["label"].map({"n": "negative", "o": "neutral", "p": "positive"}).fillna(
+        frame["label"].astype(str)
+    )
+    dataset = Dataset.from_pandas(frame, preserve_index=False)
+    train_test = dataset.train_test_split(test_size=0.2, seed=seed)
+    validation_test = train_test["test"].train_test_split(test_size=0.5, seed=seed)
+    return DatasetDict(
+        {
+            "train": train_test["train"],
+            "validation": validation_test["train"],
+            "test": validation_test["test"],
+        }
+    )
 
 
 def prepare_scientbank(raw, *, processor: str, seed: int):

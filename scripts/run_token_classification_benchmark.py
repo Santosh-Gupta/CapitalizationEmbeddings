@@ -93,6 +93,25 @@ FALLBACK_LABELS = {
         "WRB",
         "``",
     ],
+    ("rjac/kaggle-entity-annotated-corpus-ner-dataset", "ner_tags"): [
+        "O",
+        "B-PER",
+        "I-PER",
+        "B-ORG",
+        "I-ORG",
+        "B-GEO",
+        "I-GEO",
+        "B-GPE",
+        "I-GPE",
+        "B-TIM",
+        "I-TIM",
+        "B-ART",
+        "I-ART",
+        "B-EVE",
+        "I-EVE",
+        "B-NAT",
+        "I-NAT",
+    ],
 }
 
 
@@ -161,7 +180,7 @@ def main() -> None:
     results_file = Path(args.results_file or output_root / "results.jsonl")
     csv_file = results_file.with_suffix(".csv")
 
-    raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
+    raw = load_prepared_benchmark_dataset(spec, seed=args.seed)
     raw = ensure_validation_split(raw, seed=args.seed)
     raw = maybe_select_samples(
         raw,
@@ -213,6 +232,30 @@ def load_benchmark_dataset(dataset_name: str, dataset_config: str | None) -> Dat
     if dataset_config:
         return load_dataset(dataset_name, dataset_config)
     return load_dataset(dataset_name)
+
+
+def load_prepared_benchmark_dataset(spec: Any, *, seed: int) -> DatasetDict:
+    raw = load_benchmark_dataset(spec.dataset_name, spec.dataset_config)
+    if spec.processor == "single_train_token_split":
+        return split_single_train_dataset(raw, seed=seed)
+    return raw
+
+
+def split_single_train_dataset(raw: DatasetDict, seed: int) -> DatasetDict:
+    if "test" in raw:
+        return raw
+
+    from datasets import DatasetDict
+
+    train_test = raw["train"].train_test_split(test_size=0.2, seed=seed)
+    validation_test = train_test["test"].train_test_split(test_size=0.5, seed=seed)
+    return DatasetDict(
+        {
+            "train": train_test["train"],
+            "validation": validation_test["train"],
+            "test": validation_test["test"],
+        }
+    )
 
 
 def ensure_validation_split(raw: DatasetDict, seed: int) -> DatasetDict:

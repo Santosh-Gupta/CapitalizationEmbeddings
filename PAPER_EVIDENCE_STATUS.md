@@ -88,6 +88,26 @@ Bootstrap/statistical reports:
 /workspace/capitalization_embeddings/reports
 ```
 
+## Added Cased-Favored Candidates
+
+The benchmark registry now includes these additional cased-favored candidates:
+
+| Benchmark key | User-proposed source | Status | Caveat |
+| --- | --- | --- | --- |
+| `tweet_eval_emoji` | TweetEval Emoji | already implemented and 5-seed diagnostic completed | Clean broad benchmark, but current cap-embed result matches uncased and loses to cased. |
+| `trec_fine` | TREC Fine | already implemented and 5-seed diagnostic completed | Clean replicated benchmark, but current cap-embed result underperforms both baselines. |
+| `kaggle_walia_ner` | Kaggle/Walia NER | implemented, not yet run | Public HF mirror has only one train split, so runner creates deterministic train/validation/test splits per seed. Published BERT comparison used BERT as embeddings into another architecture, so this is supporting evidence rather than a clean BERT fine-tune replication. |
+| `isarcasm_eval_en` | iSarcasmEval original English Task A | implemented, not yet run | Small social sarcasm benchmark; useful as supporting evidence, but not a broad headline benchmark by itself. |
+| `citation_sentiment_acl` | Public citation sentiment corpus | implemented, not yet run | This is the ACL citation sentiment corpus, not the tiny 97-example ACM test set. Do not transfer the reported ACM gap without verifying and acquiring that exact test set. |
+
+Implementation notes:
+
+- `kaggle_walia_ner` runs through `scripts/run_token_classification_benchmark.py`.
+- `isarcasm_eval_en` and `citation_sentiment_acl` run through
+  `scripts/run_sequence_classification_benchmark.py`.
+- These have loader smoke checks locally, but no full GPU fine-tuning results
+  yet.
+
 Regenerate an evidence ledger from the current JSONL files with:
 
 ```bash

@@ -130,6 +130,58 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         status="implemented",
     ),
     BenchmarkSpec(
+        key="kaggle_walia_ner",
+        task_type="token_classification",
+        dataset_name="rjac/kaggle-entity-annotated-corpus-ner-dataset",
+        dataset_config=None,
+        text_columns=("tokens",),
+        label_column="ner_tags",
+        metric="seqeval_f1",
+        priority=8,
+        why_capitalization_matters=(
+            "Kaggle/Walia NER is entity-heavy and has a reported cased-over-"
+            "uncased gap, but the published comparison used BERT embeddings in "
+            "another architecture, so treat it as supporting evidence."
+        ),
+        status="implemented",
+        processor="single_train_token_split",
+    ),
+    BenchmarkSpec(
+        key="isarcasm_eval_en",
+        task_type="sequence_classification",
+        dataset_name="iabufarha/iSarcasmEval",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="label",
+        metric="macro_f1",
+        priority=9,
+        why_capitalization_matters=(
+            "Sarcasm in social text can use casing as an expressive cue; the "
+            "original iSarcasmEval English task is a small but relevant "
+            "cased-favored candidate."
+        ),
+        status="implemented",
+        processor="isarcasm_eval_en_task_a",
+    ),
+    BenchmarkSpec(
+        key="citation_sentiment_acl",
+        task_type="sequence_classification",
+        dataset_name="gaof23/citation_sentiment_corpus",
+        dataset_config=None,
+        text_columns=("text",),
+        label_column="label",
+        metric="macro_f1",
+        priority=10,
+        why_capitalization_matters=(
+            "Citation sentiment is scientific text with named methods and "
+            "acronyms. This is the public ACL citation sentiment corpus, not the "
+            "tiny ACM 97-example test set, so reported ACM numbers should not be "
+            "transferred without verification."
+        ),
+        status="implemented",
+        processor="citation_sentiment_acl",
+    ),
+    BenchmarkSpec(
         key="tweet_eval_irony",
         task_type="sequence_classification",
         dataset_name="tweet_eval",
@@ -137,7 +189,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="macro_f1",
-        priority=10,
+        priority=11,
         why_capitalization_matters=(
             "Noisy social text where casing can be expressive or inconsistent; "
             "reported BERT baselines often favor uncased."
@@ -152,7 +204,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="macro_f1",
-        priority=11,
+        priority=12,
         why_capitalization_matters=(
             "Social sentiment classification where lexical unification may matter "
             "more than preserving case."
@@ -167,7 +219,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="macro_f1",
-        priority=12,
+        priority=13,
         why_capitalization_matters=(
             "Noisy social classification with inconsistent casing."
         ),
@@ -181,7 +233,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="macro_f1",
-        priority=13,
+        priority=14,
         why_capitalization_matters=(
             "Noisy emotion classification where uncased baselines can be stronger."
         ),
@@ -195,7 +247,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="accuracy",
-        priority=14,
+        priority=15,
         why_capitalization_matters=(
             "Fine-grained sentiment where case is usually not the core signal."
         ),
@@ -209,7 +261,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("sentence1", "sentence2"),
         label_column="label",
         metric="pearson",
-        priority=15,
+        priority=16,
         why_capitalization_matters=(
             "Semantic similarity should reward lexical sharing across casing."
         ),
@@ -223,7 +275,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="accuracy",
-        priority=16,
+        priority=17,
         why_capitalization_matters=(
             "Topic classification where vocabulary sharing can outweigh case cues."
         ),
@@ -237,7 +289,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("question_title", "question_content", "best_answer"),
         label_column="topic",
         metric="accuracy",
-        priority=17,
+        priority=18,
         why_capitalization_matters=(
             "Noisy web topic classification where uncased BERT can have an edge."
         ),
@@ -251,7 +303,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="accuracy",
-        priority=18,
+        priority=19,
         why_capitalization_matters=(
             "Scientific relation classification where uncased baselines can be "
             "strong; entity and acronym casing should be preserved without "
@@ -268,7 +320,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="accuracy",
-        priority=19,
+        priority=20,
         why_capitalization_matters=(
             "Scientific relation classification with marked entity spans; useful "
             "for testing whether capitalization embeddings retain uncased-style "
@@ -284,7 +336,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("text",),
         label_column="label",
         metric="accuracy",
-        priority=20,
+        priority=21,
         why_capitalization_matters=(
             "Combined scientific relation classification benchmark, matching the "
             "reported setting where uncased BERT can outperform cased BERT."
@@ -300,7 +352,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("question", "reference_answer", "student_answer"),
         label_column="label",
         metric="macro_f1",
-        priority=21,
+        priority=23,
         why_capitalization_matters=(
             "Automatic short-answer grading with unseen questions; reported "
             "uncased gains are large, likely because lexical sharing dominates "
@@ -333,7 +385,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("question", "reference_answer", "student_answer"),
         label_column="label",
         metric="accuracy",
-        priority=23,
+        priority=24,
         why_capitalization_matters=(
             "Five-way short-answer grading with unseen questions; a related "
             "variant of SciEntsBank for checking whether the uncased advantage "
@@ -350,7 +402,7 @@ BENCHMARKS: tuple[BenchmarkSpec, ...] = (
         text_columns=("question", "reference_answer", "student_answer"),
         label_column="label",
         metric="accuracy",
-        priority=24,
+        priority=25,
         why_capitalization_matters=(
             "Five-way short-answer grading with unseen domains; related to the "
             "3-way setting but useful as an additional robustness slice."

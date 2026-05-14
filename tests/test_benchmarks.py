@@ -16,6 +16,9 @@ class BenchmarkRegistryTests(unittest.TestCase):
         self.assertIn("stsb", keys)
         self.assertIn("tweet_eval_emoji", keys)
         self.assertIn("trec_fine", keys)
+        self.assertIn("kaggle_walia_ner", keys)
+        self.assertIn("isarcasm_eval_en", keys)
+        self.assertIn("citation_sentiment_acl", keys)
 
     def test_get_benchmark_returns_specs_by_key(self):
         spec = get_benchmark("conll2003_ner")
@@ -80,6 +83,21 @@ class BenchmarkRegistryTests(unittest.TestCase):
         trec = get_benchmark("trec_fine")
         self.assertEqual(trec.dataset_name, "lukasgarbas/trec")
         self.assertEqual(trec.label_column, "fine_label")
+
+        isarcasm = get_benchmark("isarcasm_eval_en")
+        self.assertEqual(isarcasm.processor, "isarcasm_eval_en_task_a")
+        self.assertEqual(isarcasm.metric, "macro_f1")
+
+        citation = get_benchmark("citation_sentiment_acl")
+        self.assertEqual(citation.processor, "citation_sentiment_acl")
+        self.assertEqual(citation.metric, "macro_f1")
+
+    def test_extra_cased_favored_token_benchmarks_are_registered(self):
+        walia = get_benchmark("kaggle_walia_ner")
+
+        self.assertEqual(walia.dataset_name, "rjac/kaggle-entity-annotated-corpus-ner-dataset")
+        self.assertEqual(walia.processor, "single_train_token_split")
+        self.assertEqual(walia.metric, "seqeval_f1")
 
     def test_priorities_are_unique(self):
         priorities = [spec.priority for spec in BENCHMARKS]
