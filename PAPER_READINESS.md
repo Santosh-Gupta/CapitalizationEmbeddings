@@ -114,6 +114,12 @@ Completed in the current paper-hardening pass:
    `APPENDIX_LIMITATIONS.md`.
 9. First method-section prose draft:
    `METHOD_SECTION_DRAFT.md`.
+10. Full manuscript draft scaffold:
+    `paper/draft.md`.
+11. Starter bibliography and citation caveat tracker:
+    `paper/references.bib`, `CITATION_STATUS.md`.
+12. Dataset provenance table for main, control, and appendix benchmarks:
+    `DATASET_PROVENANCE.md`.
 
 ## Non-GPU Work Remaining
 
@@ -121,7 +127,8 @@ These can still be done before restarting the pod:
 
 1. Run error analysis on saved token prediction files after choosing the exact
    main-table prediction roots to inspect.
-2. Convert the protocol/outline/method draft into a full manuscript draft.
+2. Convert `paper/draft.md` from scaffold prose into the submission manuscript
+   after ablations/error analysis are available.
 
 ## Next GPU Gate
 

@@ -143,10 +143,10 @@ Completed:
 
 Active non-GPU work before restarting RunPod:
 
-1. Write a locked experimental protocol for paper submission.
-2. Write the ablation matrix and only then restart RunPod for the GPU runs.
-3. Add paper-ready result tables generated from report JSON files.
-4. Add error-analysis tooling over saved prediction files.
-5. Draft the manuscript outline around the narrowed, defensible claim:
-   capitalization embeddings recover cased-model signal mainly on token/entity
-   tasks while retaining uncased lexical sharing.
+1. Run token-level error analysis once the saved prediction JSONL roots are
+   mounted from the RunPod network volume.
+2. Keep `paper/draft.md`, `PAPER_READINESS.md`, and `PAPER_EVIDENCE_STATUS.md`
+   synchronized after every result or design decision so no work is lost across
+   context compaction.
+3. Restart RunPod only when the next step is one of the locked GPU ablations or
+   seed expansions.
