@@ -12,6 +12,7 @@ outputs/
 runs/
 wandb/
 mlruns/
+logs/
 *.safetensors
 *.bin
 *.pt
