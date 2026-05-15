@@ -96,8 +96,8 @@ The benchmark registry now includes these additional cased-favored candidates:
 | --- | --- | --- | --- |
 | `tweet_eval_emoji` | TweetEval Emoji | already implemented and 5-seed diagnostic completed | Clean broad benchmark, but current cap-embed result matches uncased and loses to cased. |
 | `trec_fine` | TREC Fine | already implemented and 5-seed diagnostic completed | Clean replicated benchmark, but current cap-embed result underperforms both baselines. |
-| `kaggle_walia_ner` | Kaggle/Walia NER | implemented, not yet run | Public HF mirror has only one train split, so runner creates deterministic train/validation/test splits per seed. Published BERT comparison used BERT as embeddings into another architecture, so this is supporting evidence rather than a clean BERT fine-tune replication. |
-| `isarcasm_eval_en` | iSarcasmEval original English Task A | implemented, not yet run | Small social sarcasm benchmark; useful as supporting evidence, but not a broad headline benchmark by itself. |
+| `kaggle_walia_ner` | Kaggle/Walia NER | 5-seed diagnostic completed | Public HF mirror has only one train split, so runner creates deterministic train/validation/test splits per seed. Published BERT comparison used BERT as embeddings into another architecture, so this is supporting evidence rather than a clean BERT fine-tune replication. Current result: cap beats uncased and ties cased. |
+| `isarcasm_eval_en` | iSarcasmEval original English Task A | 5-seed diagnostic completed | Small social sarcasm benchmark; useful as supporting evidence, but not a broad headline benchmark by itself. Current result: cap ties both baselines, with a small negative mean. |
 | `citation_sentiment_acl` | Public citation sentiment corpus | implemented, not yet run | This is the ACL citation sentiment corpus, not the tiny 97-example ACM test set. Do not transfer the reported ACM gap without verifying and acquiring that exact test set. |
 
 Implementation notes:
@@ -105,8 +105,9 @@ Implementation notes:
 - `kaggle_walia_ner` runs through `scripts/run_token_classification_benchmark.py`.
 - `isarcasm_eval_en` and `citation_sentiment_acl` run through
   `scripts/run_sequence_classification_benchmark.py`.
-- These have loader smoke checks locally, but no full GPU fine-tuning results
-  yet.
+- `kaggle_walia_ner` and `isarcasm_eval_en` have 5-seed GPU diagnostics under
+  `/workspace/capitalization_embeddings/checkpoints/added_cased_favored_5seed`.
+  `citation_sentiment_acl` still has only loader smoke checks.
 
 Regenerate an evidence ledger from the current JSONL files with:
 
@@ -174,6 +175,8 @@ both positive and negative evidence.
 | 20 Newsgroups | accuracy | 0.704965 +/- 0.001271, n=5 | 0.693999 +/- 0.002180, n=5 | 0.706320 +/- 0.002480, n=5 | cap ~= uncased > cased |
 | TREC Fine | accuracy | 0.820400 +/- 0.007925, n=5 | 0.836000 +/- 0.005099, n=5 | 0.829600 +/- 0.008877, n=5 | cap underperforms both |
 | TweetEval Emoji | accuracy | 0.369396 +/- 0.002440, n=5 | 0.453884 +/- 0.002073, n=5 | 0.369372 +/- 0.003103, n=5 | cased dominates; cap ~= uncased |
+| Kaggle/Walia NER | entity F1 | 0.842183 +/- 0.007401, n=5 | 0.843687 +/- 0.006108, n=5 | 0.826976 +/- 0.006008, n=5 | cap > uncased, cap ~= cased |
+| iSarcasmEval original EN | macro-F1 | 0.603190 +/- 0.017442, n=5 | 0.607535 +/- 0.010922, n=5 | 0.607586 +/- 0.017493, n=5 | cap ties both; small negative mean |
 | SciERC relations | accuracy | 0.844353 +/- 0.010585, n=5 | 0.843326 +/- 0.010832, n=5 | 0.861602 +/- 0.010174, n=5 | uncased dominates |
 | Combined scientific relations | accuracy | 0.625282 +/- 0.004729, n=5 | 0.624680 +/- 0.006076, n=5 | 0.632506 +/- 0.010860, n=5 | uncased dominates |
 | SemEval18 Task 7 validation | accuracy | 0.530081 +/- 0.040813, n=5 | 0.585366 +/- 0.043782, n=5 | 0.513821 +/- 0.049252, n=5 | cased dominates, high variance |
@@ -189,12 +192,20 @@ Interpretation:
 - TREC Fine and TweetEval Emoji are useful negative controls. They should either
   be reported honestly as limitations or omitted from the main table and kept in
   an appendix if the paper's stated scope is token-level capitalization.
+- Kaggle/Walia NER is useful supporting evidence for the token-level
+  capitalization claim: cap is +0.015207 F1 over uncased with bootstrap CI95
+  [+0.008672, +0.021349], and ties cased under a 0.005 practical margin.
+- iSarcasmEval is neutral evidence: cap is within the wide bootstrap intervals
+  of both baselines, with no positive mean advantage.
 
 Bootstrap reports:
 
 ```text
 /workspace/capitalization_embeddings/reports/mixed_case_sequence_macro_f1_bootstrap_10000.md
 /workspace/capitalization_embeddings/reports/mixed_case_sequence_accuracy_bootstrap_10000.md
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_walia_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_isarcasm_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_holm_margin005.md
 ```
 
 ## Statistical Readiness

@@ -462,7 +462,7 @@ needed.
 
 ### Added Cased-Favored Benchmark 5-Seed Run
 
-Status: active.
+Status: completed.
 
 Started: 2026-05-14 UTC.
 
@@ -528,3 +528,71 @@ Early observation:
 Walia NER is substantially larger than the small sequence diagnostics. The
 first model/seed has 7,194 training steps at batch size 16, so the full
 5-seed x 3-model Walia block is expected to take hours, not minutes.
+
+Final counts:
+
+```text
+kaggle_walia_ner: 15 rows, 5 seeds x 3 models
+isarcasm_eval_en: 15 rows, 5 seeds x 3 models
+```
+
+Final means:
+
+```text
+kaggle_walia_ner entity F1
+  capitalized_pretrained: 0.842183 +/- 0.007401
+  cased_pretrained:       0.843687 +/- 0.006108
+  uncased_pretrained:     0.826976 +/- 0.006008
+
+isarcasm_eval_en macro-F1
+  capitalized_pretrained: 0.603190 +/- 0.017442
+  cased_pretrained:       0.607535 +/- 0.010922
+  uncased_pretrained:     0.607586 +/- 0.017493
+```
+
+Bootstrap/Holm reports:
+
+```text
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_walia_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_isarcasm_bootstrap_1000.md
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_holm_margin005.md
+/workspace/capitalization_embeddings/reports/added_cased_favored_5seed_evidence_status.md
+```
+
+Statistical read:
+
+```text
+Kaggle/Walia cap > uncased:
+  delta +0.015207, bootstrap CI95 [+0.008672, +0.021349],
+  raw p = 0, Holm p = 0, label = win.
+
+Kaggle/Walia cap vs cased:
+  delta -0.001504, bootstrap CI95 [-0.009226, +0.004954],
+  label = tie at a 0.005 practical margin.
+
+iSarcasm cap vs uncased:
+  delta -0.004397, bootstrap CI95 [-0.043937, +0.045050],
+  label = tie at a 0.005 practical margin.
+
+iSarcasm cap vs cased:
+  delta -0.004345, bootstrap CI95 [-0.050490, +0.049391],
+  label = tie at a 0.005 practical margin.
+```
+
+Cleanup:
+
+```text
+Deleted disposable /workspace/capitalization_embeddings/checkpoints/benchmarks
+after reports were generated. Compact JSONL metrics and prediction files remain
+under /workspace/capitalization_embeddings/checkpoints/added_cased_favored_5seed.
+```
+
+Final RunPod state:
+
+```text
+GPU idle: NVIDIA GeForce RTX 4090, 0 %, 1 MiB / 24564 MiB
+No active benchmark process remains.
+```
+
+The GPU pod can be stopped after this point if no further interactive work is
+needed.

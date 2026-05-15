@@ -1,0 +1,75 @@
+{
+  "alpha": 0.05,
+  "equivalence_threshold": 0.005,
+  "family": "added_cased_favored_5seed",
+  "hypotheses": [
+    {
+      "benchmark": "isarcasm_eval_en",
+      "bootstrap_ci95": [
+        -0.05049017183844778,
+        0.04939074330791629
+      ],
+      "comparison": "capitalized_pretrained>cased_pretrained",
+      "family": "added_cased_favored_5seed",
+      "holm_adjusted_p": 1.0,
+      "holm_rank": 4,
+      "holm_reject": false,
+      "holm_threshold": 0.05,
+      "label": "tie",
+      "n_seeds": 5,
+      "p_value": 0.8348,
+      "seed_delta_mean": -0.00434506577181375
+    },
+    {
+      "benchmark": "isarcasm_eval_en",
+      "bootstrap_ci95": [
+        -0.043937231540166446,
+        0.045049901124188316
+      ],
+      "comparison": "capitalized_pretrained>uncased_pretrained",
+      "family": "added_cased_favored_5seed",
+      "holm_adjusted_p": 1.0,
+      "holm_rank": 2,
+      "holm_reject": false,
+      "holm_threshold": 0.016666666666666666,
+      "label": "tie",
+      "n_seeds": 5,
+      "p_value": 0.7316,
+      "seed_delta_mean": -0.0043966923915291336
+    },
+    {
+      "benchmark": "kaggle_walia_ner",
+      "bootstrap_ci95": [
+        -0.009226449918388656,
+        0.004953775238219518
+      ],
+      "comparison": "capitalized_pretrained>cased_pretrained",
+      "family": "added_cased_favored_5seed",
+      "holm_adjusted_p": 1.0,
+      "holm_rank": 3,
+      "holm_reject": false,
+      "holm_threshold": 0.025,
+      "label": "tie",
+      "n_seeds": 5,
+      "p_value": 0.7648,
+      "seed_delta_mean": -0.0015044615720881892
+    },
+    {
+      "benchmark": "kaggle_walia_ner",
+      "bootstrap_ci95": [
+        0.008671553759100484,
+        0.021349461415051597
+      ],
+      "comparison": "capitalized_pretrained>uncased_pretrained",
+      "family": "added_cased_favored_5seed",
+      "holm_adjusted_p": 0.0,
+      "holm_rank": 1,
+      "holm_reject": true,
+      "holm_threshold": 0.0125,
+      "label": "win",
+      "n_seeds": 5,
+      "p_value": 0.0,
+      "seed_delta_mean": 0.015206709851126798
+    }
+  ]
+}
