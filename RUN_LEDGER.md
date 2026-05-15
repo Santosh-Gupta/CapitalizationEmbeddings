@@ -90,6 +90,69 @@ twenty_newsgroups
 
 ## Active Or Next Batch
 
+### Case-Channel Ablation Batch
+
+Status: planned; script prepared locally, not yet launched.
+
+Purpose:
+
+- Test whether the current best result depends on the mixed-case state,
+  capitalization embedding dropout, and auxiliary capitalization loss.
+- Keep the first resumed GPU session focused on CoNLL-2003 and Kaggle/Walia NER
+  before spending on wider seed expansion.
+
+Prepared launcher:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_case_ablation_batch.sh
+```
+
+The launcher trains missing checkpoints only:
+
+```text
+4-state no-dropout:
+/workspace/capitalization_embeddings/checkpoints/mlm/mixed_case_no_dropout/capitalized_from_3class_steps3000_lr2e5/final
+
+4-state no-aux-loss:
+/workspace/capitalization_embeddings/checkpoints/mlm/mixed_case_no_aux_loss/capitalized_from_3class_steps3000_lr2e5_drop01/final
+```
+
+It then evaluates these variants:
+
+```text
+three_class_existing
+four_class_dropout_current_best
+four_class_no_dropout
+four_class_no_aux_loss
+```
+
+Tasks and seeds:
+
+```text
+tasks: conll2003_ner, kaggle_walia_ner
+seeds: 13 21 34 55 89
+```
+
+Result root:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/ablations_case_channel_5seed
+```
+
+Log root:
+
+```text
+/workspace/capitalization_embeddings/logs/ablations_case_channel
+```
+
+Before launch:
+
+1. Pull latest `main`.
+2. Confirm dependencies are installed with `pip install -e .`.
+3. Confirm GPU idle with `nvidia-smi`.
+4. Run `bash -n scripts/run_case_ablation_batch.sh`.
+
 ### Paper Final High-Variance 20-Seed Expansion
 
 Status: stopped early; partial results retained.

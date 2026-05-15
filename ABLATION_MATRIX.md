@@ -53,6 +53,21 @@ The first resumed GPU session should be small and decisive:
 If no-dropout is not better, do not spend more compute on it. Move to 3-state
 versus 4-state and no-auxiliary-loss ablations.
 
+Prepared launcher:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_case_ablation_batch.sh
+```
+
+The launcher is idempotent. It checks for existing ablation checkpoints, trains
+missing 4-state no-dropout and 4-state no-aux-loss checkpoints, then runs
+5-seed CoNLL/Walia evaluations into:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/ablations_case_channel_5seed
+```
+
 ## What Not To Run First
 
 Do not prioritize:
