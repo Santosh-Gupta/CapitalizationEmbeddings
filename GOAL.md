@@ -137,15 +137,16 @@ Completed:
 - Ran current-best mixed-case sequence sweeps for TweetEval Irony,
   TweetEval Offensive, SST-5, and 20 Newsgroups.
 - Generated bootstrap reports for token, PTB, and selected sequence tasks.
+- Added CPU-only parameter-efficiency and vocabulary-fragmentation reports.
+- Added `PAPER_READINESS.md` to lock the defensible paper claim, boundary
+  conditions, and next GPU gate.
 
-Active:
+Active non-GPU work before restarting RunPod:
 
-1. Expand high-variance headline tasks to 20 seeds, starting with WNUT-17 and
-   the selected uncased-favored sequence tasks.
-2. Expand CoNLL-2003 to 20 seeds if compute is already active, because its
-   cap-over-cased mean is positive but still not significant at 5 seeds.
-3. Add ablations for 3-class versus 4-class mixed-case versus mixed-case +
-   capitalization embedding dropout.
-4. Decide which sequence/scientific benchmarks belong in the main paper table
-   versus appendix/negative-control tables.
-5. Generate Holm-corrected final tables and update `PAPER_EVIDENCE_STATUS.md`.
+1. Write a locked experimental protocol for paper submission.
+2. Write the ablation matrix and only then restart RunPod for the GPU runs.
+3. Add paper-ready result tables generated from report JSON files.
+4. Add error-analysis tooling over saved prediction files.
+5. Draft the manuscript outline around the narrowed, defensible claim:
+   capitalization embeddings recover cased-model signal mainly on token/entity
+   tasks while retaining uncased lexical sharing.

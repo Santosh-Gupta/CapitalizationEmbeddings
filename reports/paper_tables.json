@@ -1,0 +1,268 @@
+{
+  "rows": [
+    {
+      "benchmark": "conll2003_ner",
+      "cap_cased_ci95": [
+        -0.005488434231884567,
+        0.018058687570957386
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": 0.004536936112915652,
+      "cap_minus_uncased": 0.012525403382647122,
+      "cap_uncased_ci95": [
+        0.0033635077704621515,
+        0.019591043622483196
+      ],
+      "cap_uncased_label": "win",
+      "capitalized": {
+        "mean": 0.9164837927550995,
+        "n": 20,
+        "std": 0.0018208429987833063
+      },
+      "cased": {
+        "mean": 0.9119468566421839,
+        "n": 20,
+        "std": 0.0035315683242713386
+      },
+      "family": "token/entity",
+      "label": "CoNLL-2003 NER",
+      "metric": "entity F1",
+      "uncased": {
+        "mean": 0.9039583893724522,
+        "n": 20,
+        "std": 0.0025438810720541604
+      }
+    },
+    {
+      "benchmark": "kaggle_walia_ner",
+      "cap_cased_ci95": [
+        -0.009226449918388656,
+        0.004953775238219518
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": -0.0015044615720881892,
+      "cap_minus_uncased": 0.015206709851126798,
+      "cap_uncased_ci95": [
+        0.008671553759100484,
+        0.021349461415051597
+      ],
+      "cap_uncased_label": "win",
+      "capitalized": {
+        "mean": 0.8421825201364136,
+        "n": 5,
+        "std": 0.007401415452064072
+      },
+      "cased": {
+        "mean": 0.8436869817085016,
+        "n": 5,
+        "std": 0.006107906861363778
+      },
+      "family": "token/entity",
+      "label": "Kaggle/Walia NER",
+      "metric": "entity F1",
+      "uncased": {
+        "mean": 0.8269758102852867,
+        "n": 5,
+        "std": 0.006007839468081842
+      }
+    },
+    {
+      "benchmark": "wnut17_ner",
+      "cap_cased_ci95": [
+        -0.02999815931180294,
+        0.04302397412995443
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": 0.006909739812349036,
+      "cap_minus_uncased": 0.007102779586562374,
+      "cap_uncased_ci95": [
+        -0.03143696923735418,
+        0.04796131539558557
+      ],
+      "cap_uncased_label": "tie",
+      "capitalized": {
+        "mean": 0.4494819923474065,
+        "n": 20,
+        "std": 0.010278821523874118
+      },
+      "cased": {
+        "mean": 0.4425722525350575,
+        "n": 20,
+        "std": 0.010044263045273123
+      },
+      "family": "token/entity",
+      "label": "WNUT-17 NER",
+      "metric": "entity F1",
+      "uncased": {
+        "mean": 0.44237921276084424,
+        "n": 20,
+        "std": 0.015166180365482175
+      }
+    },
+    {
+      "benchmark": "sst5",
+      "cap_cased_ci95": [
+        -0.015837104072398245,
+        0.03981900452488696
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": 0.012352941176470577,
+      "cap_minus_uncased": -0.00033936651583710287,
+      "cap_uncased_ci95": [
+        -0.02126696832579178,
+        0.018099547511312264
+      ],
+      "cap_uncased_label": "tie",
+      "capitalized": {
+        "mean": 0.5406787330316741,
+        "n": 20,
+        "std": 0.006830694213126934
+      },
+      "cased": {
+        "mean": 0.5283257918552036,
+        "n": 20,
+        "std": 0.00835432120844145
+      },
+      "family": "uncased-favored control",
+      "label": "SST-5",
+      "metric": "accuracy",
+      "uncased": {
+        "mean": 0.5410180995475112,
+        "n": 20,
+        "std": 0.003926290657954175
+      }
+    },
+    {
+      "benchmark": "tweet_eval_irony",
+      "cap_cased_ci95": [
+        -0.020084058714389157,
+        0.06235320995911179
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": 0.01967928823684491,
+      "cap_minus_uncased": 0.008565716142362744,
+      "cap_uncased_ci95": [
+        -0.028786851831133362,
+        0.04722143486370995
+      ],
+      "cap_uncased_label": "tie",
+      "capitalized": {
+        "mean": 0.6788050624458741,
+        "n": 20,
+        "std": 0.009192019903716457
+      },
+      "cased": {
+        "mean": 0.6591257742090292,
+        "n": 20,
+        "std": 0.014412951499842841
+      },
+      "family": "uncased-favored control",
+      "label": "TweetEval Irony",
+      "metric": "macro-F1",
+      "uncased": {
+        "mean": 0.6702393463035115,
+        "n": 20,
+        "std": 0.013519997151400294
+      }
+    },
+    {
+      "benchmark": "tweet_eval_offensive",
+      "cap_cased_ci95": [
+        -0.015278578283096691,
+        0.04357325624914656
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": 0.013305361811280069,
+      "cap_minus_uncased": 0.006566459033308841,
+      "cap_uncased_ci95": [
+        -0.018078909869815207,
+        0.02994074762487678
+      ],
+      "cap_uncased_label": "tie",
+      "capitalized": {
+        "mean": 0.8099480566566528,
+        "n": 20,
+        "std": 0.006524435939418788
+      },
+      "cased": {
+        "mean": 0.7966426948453729,
+        "n": 20,
+        "std": 0.007294500877368399
+      },
+      "family": "uncased-favored control",
+      "label": "TweetEval Offensive",
+      "metric": "macro-F1",
+      "uncased": {
+        "mean": 0.8033815976233439,
+        "n": 20,
+        "std": 0.009145548038143887
+      }
+    },
+    {
+      "benchmark": "twenty_newsgroups",
+      "cap_cased_ci95": [
+        0.0013276686139139793,
+        0.019383961763143942
+      ],
+      "cap_cased_label": "inconclusive_positive",
+      "cap_minus_cased": 0.010760754115772713,
+      "cap_minus_uncased": -0.0008430695698353585,
+      "cap_uncased_ci95": [
+        -0.00982474774296338,
+        0.008364312267657992
+      ],
+      "cap_uncased_label": "tie",
+      "capitalized": {
+        "mean": 0.7046933085501859,
+        "n": 20,
+        "std": 0.0030767541349527726
+      },
+      "cased": {
+        "mean": 0.693932554434413,
+        "n": 20,
+        "std": 0.0022943792583127185
+      },
+      "family": "uncased-favored control",
+      "label": "20 Newsgroups",
+      "metric": "accuracy",
+      "uncased": {
+        "mean": 0.7055363781200212,
+        "n": 20,
+        "std": 0.002806808394336811
+      }
+    },
+    {
+      "benchmark": "isarcasm_eval_en",
+      "cap_cased_ci95": [
+        -0.05049017183844778,
+        0.04939074330791629
+      ],
+      "cap_cased_label": "tie",
+      "cap_minus_cased": -0.00434506577181375,
+      "cap_minus_uncased": -0.0043966923915291336,
+      "cap_uncased_ci95": [
+        -0.043937231540166446,
+        0.045049901124188316
+      ],
+      "cap_uncased_label": "tie",
+      "capitalized": {
+        "mean": 0.6031897666056597,
+        "n": 5,
+        "std": 0.017441503347473596
+      },
+      "cased": {
+        "mean": 0.6075348323774735,
+        "n": 5,
+        "std": 0.010921821567640128
+      },
+      "family": "appendix/neutral",
+      "label": "iSarcasmEval EN",
+      "metric": "macro-F1",
+      "uncased": {
+        "mean": 0.6075864589971889,
+        "n": 5,
+        "std": 0.01749253120586837
+      }
+    }
+  ]
+}

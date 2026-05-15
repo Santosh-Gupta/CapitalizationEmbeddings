@@ -1,0 +1,76 @@
+{
+  "capitalization_vocab_size": 4,
+  "cased_model": "bert-base-cased",
+  "component_counts": {
+    "capitalization_embedding_params": 3072,
+    "capitalization_mlm_classifier_params": 3076,
+    "hypothetical_3x_extra_word_embeddings": 46881792,
+    "hypothetical_4x_extra_word_embeddings": 70322688
+  },
+  "rows": [
+    {
+      "encoder_with_pooler_params": 109482240,
+      "extra_vs_uncased_encoder": 0,
+      "extra_vs_uncased_mlm": 0,
+      "masked_lm_params": 109514298,
+      "name": "bert-base-uncased",
+      "note": "standard uncased baseline",
+      "vocab_size": 30522
+    },
+    {
+      "encoder_with_pooler_params": 108310272,
+      "extra_vs_uncased_encoder": -1171968,
+      "extra_vs_uncased_mlm": -1173494,
+      "masked_lm_params": 108340804,
+      "name": "bert-base-cased",
+      "note": "standard cased baseline; its vocabulary is not a 3x uncased expansion",
+      "vocab_size": 28996
+    },
+    {
+      "encoder_with_pooler_params": 109485312,
+      "extra_vs_uncased_encoder": 3072,
+      "extra_vs_uncased_mlm": 6148,
+      "masked_lm_params": 109520446,
+      "name": "capitalized-bert, 4 case states",
+      "note": "adds only capitalization embeddings at downstream time; MLM also has an auxiliary capitalization head",
+      "vocab_size": 30522
+    },
+    {
+      "encoder_with_pooler_params": 156364032,
+      "extra_vs_uncased_encoder": 46881792,
+      "extra_vs_uncased_mlm": 46942836,
+      "masked_lm_params": 156457134,
+      "name": "hypothetical 3x uncased case-expanded vocab",
+      "note": "separate lowercase/first-cap/all-caps token embeddings",
+      "vocab_size": 91566
+    },
+    {
+      "encoder_with_pooler_params": 179804928,
+      "extra_vs_uncased_encoder": 70322688,
+      "extra_vs_uncased_mlm": 70414254,
+      "masked_lm_params": 179928552,
+      "name": "hypothetical 4x uncased case-expanded vocab",
+      "note": "adds a separate mixed-case token variant as well",
+      "vocab_size": 122088
+    }
+  ],
+  "shapes": {
+    "cased": {
+      "hidden_size": 768,
+      "intermediate_size": 3072,
+      "max_position_embeddings": 512,
+      "num_hidden_layers": 12,
+      "type_vocab_size": 2,
+      "vocab_size": 28996
+    },
+    "uncased": {
+      "hidden_size": 768,
+      "intermediate_size": 3072,
+      "max_position_embeddings": 512,
+      "num_hidden_layers": 12,
+      "type_vocab_size": 2,
+      "vocab_size": 30522
+    }
+  },
+  "uncased_model": "bert-base-uncased"
+}

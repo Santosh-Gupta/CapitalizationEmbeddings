@@ -1,0 +1,165 @@
+{
+  "case_family_summary": {
+    "alphabetic_families": 23967,
+    "families_with_lower_and_all_caps": 247,
+    "families_with_lower_and_first_cap": 3601,
+    "families_with_lower_first_and_all_caps": 50,
+    "families_with_mixed_case": 47,
+    "families_with_multiple_case_forms": 3819
+  },
+  "cased_model": "bert-base-cased",
+  "cased_vocab_size": 28996,
+  "category_counts": {
+    "all_caps": 600,
+    "first_cap": 7721,
+    "lower_or_uncased": 19468,
+    "mixed_case": 47,
+    "no_alpha": 1155,
+    "special": 5
+  },
+  "counterpart_counts": {
+    "all_caps": {
+      "count": 600,
+      "lowercase_in_cased_vocab": 247,
+      "lowercase_in_uncased_vocab": 587
+    },
+    "first_cap": {
+      "count": 7721,
+      "lowercase_in_cased_vocab": 3603,
+      "lowercase_in_uncased_vocab": 7585
+    },
+    "mixed_case": {
+      "count": 47,
+      "lowercase_in_cased_vocab": 0,
+      "lowercase_in_uncased_vocab": 47
+    }
+  },
+  "illustrative_families": [
+    {
+      "categories": [
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "Apple",
+        "apple"
+      ],
+      "lowercase_token": "apple"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "US",
+        "Us",
+        "us"
+      ],
+      "lowercase_token": "us"
+    },
+    {
+      "categories": [
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##S",
+        "##s"
+      ],
+      "lowercase_token": "##s"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##ED",
+        "##ed"
+      ],
+      "lowercase_token": "##ed"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##AS",
+        "##As",
+        "##as"
+      ],
+      "lowercase_token": "##as"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##CS",
+        "##Cs",
+        "##cs"
+      ],
+      "lowercase_token": "##cs"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##DS",
+        "##Ds",
+        "##ds"
+      ],
+      "lowercase_token": "##ds"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##ES",
+        "##Es",
+        "##es"
+      ],
+      "lowercase_token": "##es"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##MS",
+        "##Ms",
+        "##ms"
+      ],
+      "lowercase_token": "##ms"
+    },
+    {
+      "categories": [
+        "all_caps",
+        "first_cap",
+        "lower_or_uncased"
+      ],
+      "forms": [
+        "##OS",
+        "##Os",
+        "##os"
+      ],
+      "lowercase_token": "##os"
+    }
+  ],
+  "uncased_model": "bert-base-uncased",
+  "uncased_vocab_size": 30522
+}

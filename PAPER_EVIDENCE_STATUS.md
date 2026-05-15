@@ -132,6 +132,42 @@ as a final benchmark result; that run produced all-zero values. Use
 `semeval2018_validation_5seed/semeval2018_task7` for the corrected validation
 run.
 
+## Theory And Efficiency Evidence
+
+CPU-only reports:
+
+```text
+reports/parameter_efficiency.md
+reports/vocab_fragmentation.md
+```
+
+Parameter-accounting result:
+
+| Design | Encoder+pooler params | Extra vs uncased encoder | MLM params | Extra vs uncased MLM |
+| --- | ---: | ---: | ---: | ---: |
+| `bert-base-uncased` | 109,482,240 | +0 | 109,514,298 | +0 |
+| `bert-base-cased` | 108,310,272 | -1,171,968 | 108,340,804 | -1,173,494 |
+| capitalized BERT, 4 case states | 109,485,312 | +3,072 | 109,520,446 | +6,148 |
+| hypothetical 3x uncased case-expanded vocab | 156,364,032 | +46,881,792 | 156,457,134 | +46,942,836 |
+| hypothetical 4x uncased case-expanded vocab | 179,804,928 | +70,322,688 | 179,928,552 | +70,414,254 |
+
+Vocabulary-fragmentation result:
+
+| Quantity | Count |
+| --- | ---: |
+| `bert-base-cased` first-cap/all-caps/mixed-case WordPieces | 8,368 |
+| first-cap/all-caps cased WordPieces with lowercase uncased counterpart | 8,172 |
+| cased-vocab alphabetic families with multiple case forms | 3,819 |
+
+Paper-framing note:
+
+- The efficiency claim should be made against explicit case-expanded vocabulary
+  designs, not against released `bert-base-cased`, because `bert-base-cased` has
+  a smaller vocabulary than `bert-base-uncased`.
+- The vocabulary-fragmentation analysis supports the factorization hypothesis:
+  many cased WordPieces can be represented as a lowercase lexical identity plus
+  a small learned case feature.
+
 ## Required Token Benchmarks
 
 These four should remain in the paper. They are the cleanest direct test of
