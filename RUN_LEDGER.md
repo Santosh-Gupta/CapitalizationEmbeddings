@@ -459,3 +459,72 @@ or apply_holm processes remain.
 
 The GPU pod can be stopped after this point if no further interactive work is
 needed.
+
+### Added Cased-Favored Benchmark 5-Seed Run
+
+Status: active.
+
+Started: 2026-05-14 UTC.
+
+RunPod host:
+
+```text
+root@203.57.40.158 -p 10019
+```
+
+Background process:
+
+```text
+PID 22273
+log: /workspace/capitalization_embeddings/logs/added_cased_favored_5seed.log
+results root: /workspace/capitalization_embeddings/checkpoints/added_cased_favored_5seed
+```
+
+Purpose:
+
+Run the two added user-requested cased-favored benchmarks that had loaders but
+no project results yet:
+
+```text
+kaggle_walia_ner
+isarcasm_eval_en
+```
+
+Checkpoint policy:
+
+Use the current best paper method for the capitalized model and matched
+continued-pretraining controls for cased/uncased.
+
+```text
+capitalized: /workspace/capitalization_embeddings/checkpoints/mlm/mixed_case_dropout/capitalized_from_3class_steps3000_lr2e5_drop01/final
+uncased:     /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_from_task_mix_steps3000_lr2e5/final
+cased:       /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_from_task_mix_steps3000_lr2e5/final
+```
+
+Command:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+python -u scripts/resume_benchmark_sweep.py \
+  --results-root /workspace/capitalization_embeddings/checkpoints/added_cased_favored_5seed \
+  --models uncased_pretrained cased_pretrained capitalized_pretrained \
+  --uncased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_from_task_mix_steps3000_lr2e5/final \
+  --cased-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_from_task_mix_steps3000_lr2e5/final \
+  --capitalized-checkpoint /workspace/capitalization_embeddings/checkpoints/mlm/mixed_case_dropout/capitalized_from_3class_steps3000_lr2e5_drop01/final \
+  --seeds 13 21 34 55 89 \
+  --token-tasks kaggle_walia_ner \
+  --sequence-tasks isarcasm_eval_en \
+  --token-epochs 3 \
+  --token-batch-size 16 \
+  --token-learning-rate 3e-5 \
+  --sequence-epochs 3 \
+  --sequence-batch-size 16 \
+  --sequence-learning-rate 2e-5 \
+  --no-save-model
+```
+
+Early observation:
+
+Walia NER is substantially larger than the small sequence diagnostics. The
+first model/seed has 7,194 training steps at batch size 16, so the full
+5-seed x 3-model Walia block is expected to take hours, not minutes.
