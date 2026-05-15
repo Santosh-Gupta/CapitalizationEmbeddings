@@ -33,7 +33,7 @@ DEFAULT_TIERS = (
     "NVIDIA GeForce RTX 5090",
     "NVIDIA L40S",
     "NVIDIA RTX 6000 Ada Generation",
-    "NVIDIA RTX A6000",
+    "NVIDIA RTX A5000",
 )
 
 BLACKWELL_OR_5090 = (
@@ -180,8 +180,15 @@ def try_tier(args: argparse.Namespace, tier: Tier) -> dict[str, Any] | None:
         return None
 
     price = info.get("price")
-    stock = info.get("stockStatus")
-    print(f"  stock={stock} price={price}", flush=True)
+    stock = info.get("dataCenterStockStatus")
+    print(
+        "  global_stock={} datacenter_stock={} price={}".format(
+            info.get("stockStatus"),
+            info.get("dataCenterStockStatus"),
+            price,
+        ),
+        flush=True,
+    )
     if stock in (None, "None"):
         return None
     if price is None or float(price) > args.max_price:
@@ -208,6 +215,13 @@ def gpu_info(args: argparse.Namespace, gpu_type_id: str) -> dict[str, Any] | Non
           availableGpuCounts
         }
       }
+      dataCenters {
+        id
+        gpuAvailability {
+          id
+          stockStatus
+        }
+      }
     }
     """.replace("SECURE_CLOUD", secure)
     payload = graphql(args.api_key, query, {"id": gpu_type_id})
@@ -216,11 +230,20 @@ def gpu_info(args: argparse.Namespace, gpu_type_id: str) -> dict[str, Any] | Non
         return None
     gpu = gpu_types[0]
     lowest = gpu.get("lowestPrice") or {}
+    datacenter_stock = None
+    for data_center in payload.get("data", {}).get("dataCenters", []):
+        if data_center.get("id") != args.data_center_id:
+            continue
+        for availability in data_center.get("gpuAvailability", []):
+            if availability.get("id") == gpu_type_id:
+                datacenter_stock = availability.get("stockStatus")
+                break
     return {
         "id": gpu.get("id"),
         "displayName": gpu.get("displayName"),
         "memoryInGb": gpu.get("memoryInGb"),
         "stockStatus": lowest.get("stockStatus"),
+        "dataCenterStockStatus": datacenter_stock,
         "price": lowest.get("uninterruptablePrice"),
         "availableGpuCounts": lowest.get("availableGpuCounts"),
     }
