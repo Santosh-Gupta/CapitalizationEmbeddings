@@ -120,13 +120,16 @@ Completed in the current paper-hardening pass:
     `paper/references.bib`, `CITATION_STATUS.md`.
 12. Dataset provenance table for main, control, and appendix benchmarks:
     `DATASET_PROVENANCE.md`.
+13. Error-analysis runbook for saved prediction JSONL files:
+    `ERROR_ANALYSIS_RUNBOOK.md`.
 
 ## Non-GPU Work Remaining
 
 These can still be done before restarting the pod:
 
 1. Run error analysis on saved token prediction files after choosing the exact
-   main-table prediction roots to inspect.
+   main-table prediction roots to inspect; commands are in
+   `ERROR_ANALYSIS_RUNBOOK.md`.
 2. Convert `paper/draft.md` from scaffold prose into the submission manuscript
    after ablations/error analysis are available.
 

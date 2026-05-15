@@ -371,7 +371,8 @@ Completed paper-hardening items now include:
   `paper/draft.md`;
 - citation/provenance tracking in `paper/references.bib`,
   `CITATION_STATUS.md`, and `DATASET_PROVENANCE.md`;
-- error-analysis tooling in `scripts/error_analysis_by_case.py`.
+- error-analysis tooling in `scripts/error_analysis_by_case.py`;
+- error-analysis commands in `ERROR_ANALYSIS_RUNBOOK.md`.
 
 Remaining before a genuinely strong submission:
 
