@@ -132,7 +132,8 @@ These can still be done before restarting the pod:
 
 ## Next GPU Gate
 
-Do not restart RunPod until the non-GPU protocol and ablation matrix are locked.
+The non-GPU protocol and ablation matrix are locked. Restart RunPod only when
+ready to run the GPU ablations or seed expansions below.
 
 When GPU work resumes, the highest-value runs are:
 

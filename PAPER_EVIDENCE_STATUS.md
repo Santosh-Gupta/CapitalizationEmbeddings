@@ -1,6 +1,6 @@
 # Paper Evidence Status
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 This file is the durable project ledger for paper readiness. It summarizes what
 is supported by completed runs, what is still preliminary, and what must be run
@@ -360,31 +360,36 @@ Regression/correlation threshold: 0.002 absolute
 
 ## What Is Still Needed For An Iron-Clad Submission
 
-Minimum next steps:
+Completed paper-hardening items now include:
 
-1. Add an ablation table comparing:
-   - 3-class capitalization embeddings
-   - 4-class mixed-case capitalization embeddings
-   - 4-class + capitalization embedding dropout
-   - matched cased and matched uncased controls
-2. Add parameter/memory accounting:
-   - cased vocabulary embedding parameters
-   - uncased vocabulary embedding parameters
-   - capitalization embedding overhead
-   - actual saved model size and training/inference throughput if available
-3. Add an error analysis:
-   - first-cap entities
-   - all-caps acronyms
-   - mixed-case words such as `iPhone`
-   - tokens where cased wins and cap embeddings lose
-4. Write a locked experimental protocol:
-   - datasets and splits
-   - model-selection rule
-   - seeds
-   - pretraining recipe
-   - downstream hyperparameters
-   - significance tests
-   - which benchmarks are primary vs appendix/diagnostic
+- locked experimental protocol in `EXPERIMENTAL_PROTOCOL.md`;
+- GPU ablation plan in `ABLATION_MATRIX.md`;
+- paper-ready result tables in `reports/paper_tables.md`;
+- parameter accounting in `reports/parameter_efficiency.md`;
+- vocabulary-fragmentation accounting in `reports/vocab_fragmentation.md`;
+- manuscript outline and draft scaffold in `MANUSCRIPT_OUTLINE.md` and
+  `paper/draft.md`;
+- citation/provenance tracking in `paper/references.bib`,
+  `CITATION_STATUS.md`, and `DATASET_PROVENANCE.md`;
+- error-analysis tooling in `scripts/error_analysis_by_case.py`.
+
+Remaining before a genuinely strong submission:
+
+1. Run the locked ablation table comparing:
+   - 3-class capitalization embeddings;
+   - 4-class mixed-case capitalization embeddings;
+   - 4-class + capitalization embedding dropout;
+   - matched cased and matched uncased controls;
+   - no-capitalization-embedding/no-auxiliary-loss controls if budget allows.
+2. Run token-level error analysis from saved prediction JSONL files:
+   - first-cap entities;
+   - all-caps acronyms;
+   - mixed-case words such as `iPhone`;
+   - tokens where cased wins and cap embeddings lose.
+3. Add actual throughput/saved-model-size measurements if the final paper makes
+   an efficiency claim beyond parameter counts.
+4. Convert `paper/draft.md` into the target venue format after ablation and
+   error-analysis results are available.
 
 Best compute allocation:
 
@@ -417,9 +422,11 @@ Recommended claims to avoid unless future runs change the evidence:
 
 ## Immediate Work Queue
 
-1. Convert the final 20-seed ledger into paper-ready main and appendix tables.
-2. Add ablation rows for mixed-case/dropout vs 3-class where they matter.
-3. Add parameter, memory, and throughput accounting.
-4. Add qualitative error analysis for capitalization categories.
-5. Decide whether to run 30-seed WNUT only if the paper needs a narrower
-   WNUT-specific claim.
+1. Run error analysis once the RunPod network volume or saved prediction roots
+   are accessible.
+2. Run the locked ablations on CoNLL and Walia when the GPU pod is restarted.
+3. Decide whether to expand Walia, OntoNotes, and PTB beyond 5 seeds only after
+   ablations show the method story is clean.
+4. Decide whether to run 30-35 seed WNUT only if the paper needs a
+   WNUT-specific superiority claim; current evidence already supports
+   tie/positive-mean framing.
