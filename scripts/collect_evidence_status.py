@@ -47,10 +47,15 @@ DEFAULT_ROOTS = (
         DEFAULT_CHECKPOINT_ROOT / "mixed_case_sequence_5seed",
         "current best mixed-case sequence sweep",
     ),
+    EvidenceRoot(
+        "added_cased_favored_5seed",
+        DEFAULT_CHECKPOINT_ROOT / "added_cased_favored_5seed",
+        "added cased-favored benchmark diagnostics",
+    ),
 )
 
 
-TOKEN_F1_TASKS = {"conll2003_ner", "wnut17_ner", "ontonotes5_ner"}
+TOKEN_F1_TASKS = {"conll2003_ner", "wnut17_ner", "ontonotes5_ner", "kaggle_walia_ner"}
 ACCURACY_TASKS = {
     "ptb_pos",
     "tweet_eval_emoji",
@@ -68,6 +73,8 @@ MACRO_F1_TASKS = {
     "tweet_eval_emotion",
     "scientbank_3way_uq",
     "scientbank_3way_ud",
+    "isarcasm_eval_en",
+    "citation_sentiment_acl",
 }
 
 
