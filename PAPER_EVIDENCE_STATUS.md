@@ -57,6 +57,27 @@ Important implementation detail: when growing from the 3-class capitalization
 embedding/table to the 4-class mixed-case table, rows 0-2 are restored from the
 previous checkpoint and only the new mixed-case row is newly initialized.
 
+## Active Pretraining Probe
+
+The next GPU pretraining experiment is `capitalization_domain_mix_v2`; see
+`PRETRAINING_CORPORA.md` and `RUN_LEDGER.md` for the full corpus and command
+protocol.
+
+This probe is designed to answer whether larger, domain-targeted case-rich MLM
+continuation can improve the known failure slices. It also fixes a fairness
+caveat in the current development history by giving cased and uncased controls a
+second real-acronym continuation before the matched V2 continuation.
+
+Do not treat V2 as paper evidence until these three checkpoints and their
+diagnostic sweep exist:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/uncased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/cased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/capitalized_from_mixed_case_current_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/domain_mix_v2_diagnostics_3seed
+```
+
 ## Source Result Roots
 
 ```text

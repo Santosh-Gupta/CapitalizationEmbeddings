@@ -160,6 +160,23 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(args.corpus, "capitalization_real_acronym_mix")
 
+    def test_parse_args_accepts_domain_mix_v2_corpus(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "capitalized",
+            "--corpus",
+            "capitalization_domain_mix_v2",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertEqual(args.corpus, "capitalization_domain_mix_v2")
+
     def test_augmented_task_mix_adds_case_variants(self):
         rows = ["tom met nasa in paris", "IBM hired alice"]
 
@@ -186,6 +203,36 @@ class MLMPretainingRunnerTests(unittest.TestCase):
         selected = self.runner.select_acronym_rich_rows(rows, max_rows=1)
 
         self.assertEqual(selected, ["NASA FDA DNA RNA"])
+
+    def test_text_from_value_flattens_nested_dataset_values(self):
+        value = {
+            "abstract": ["NASA", {"term": "iPhone"}, None],
+            "ignored": 3,
+        }
+
+        self.assertEqual(
+            self.runner.text_from_value(value),
+            "NASA iPhone",
+        )
+
+    def test_case_signal_score_counts_first_all_and_mixed_case(self):
+        self.assertGreater(
+            self.runner.case_signal_score("NASA met iPhone at Stanford"),
+            self.runner.case_signal_score("ordinary lowercase sentence"),
+        )
+
+    def test_select_case_rich_rows_deduplicates_and_filters_lowercase(self):
+        rows = [
+            "ordinary lowercase sentence",
+            "NASA met iPhone at Stanford",
+            "NASA met iPhone at Stanford",
+            "IBM FDA DNA RNA",
+        ]
+
+        selected = self.runner.select_case_rich_rows(rows, max_rows=3, min_score=2)
+
+        self.assertEqual(len(selected), 2)
+        self.assertEqual(selected[0], "IBM FDA DNA RNA")
 
     def test_chunk_text_splits_long_documents(self):
         text = " ".join(f"WORD{i}" for i in range(36))

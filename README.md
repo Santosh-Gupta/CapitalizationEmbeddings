@@ -60,6 +60,10 @@ results, and the remaining statistical work needed before paper submission.
 GPU and CPU experiment batches are tracked in [RUN_LEDGER.md](RUN_LEDGER.md).
 Update that file before launching a run and after it completes.
 
+Continued-pretraining corpora and matched-control rules are tracked in
+[PRETRAINING_CORPORA.md](PRETRAINING_CORPORA.md). Update it before adding any
+new MLM corpus or pretraining checkpoint family.
+
 ## Colab Workflow
 
 Clone or upload this repo to Colab, then run from the repo root:

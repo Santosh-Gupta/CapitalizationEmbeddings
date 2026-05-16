@@ -35,6 +35,7 @@ CORPUS_CHOICES = (
     "capitalization_task_mix",
     "capitalization_task_mix_augmented",
     "capitalization_real_acronym_mix",
+    "capitalization_domain_mix_v2",
 )
 
 
@@ -414,12 +415,15 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
         "capitalization_task_mix",
         "capitalization_task_mix_augmented",
         "capitalization_real_acronym_mix",
+        "capitalization_domain_mix_v2",
     }:
         train_rows, eval_rows = task_mix_rows()
         if corpus == "capitalization_task_mix_augmented":
             train_rows = augment_capitalization_rows(train_rows)
         if corpus == "capitalization_real_acronym_mix":
             train_rows, eval_rows = add_real_acronym_rows(train_rows, eval_rows)
+        if corpus == "capitalization_domain_mix_v2":
+            train_rows, eval_rows = add_domain_mix_v2_rows(train_rows, eval_rows)
         return (
             Dataset.from_dict({"text": train_rows}),
             Dataset.from_dict({"text": eval_rows}),
@@ -510,6 +514,151 @@ def add_real_acronym_rows(
     return train_rows + train_acronym_rows, eval_rows + eval_acronym_rows
 
 
+def add_domain_mix_v2_rows(
+    train_rows: list[str],
+    eval_rows: list[str],
+) -> tuple[list[str], list[str]]:
+    """Add larger case-rich scientific, legal, and noisy-social text rows.
+
+    This corpus is intended for matched continued pretraining across uncased,
+    cased, and capitalized models. It deliberately uses only unlabeled text and
+    source training splits for benchmark-like datasets.
+    """
+
+    cached = load_cached_domain_mix_v2_rows()
+    if cached is not None:
+        train_domain_rows, eval_domain_rows = cached
+        return train_rows + train_domain_rows, eval_rows + eval_domain_rows
+
+    domain_rows = build_domain_mix_v2_rows()
+    selected_rows = select_case_rich_rows(domain_rows, max_rows=180000, min_score=2)
+    eval_count = min(10000, max(1, len(selected_rows) // 20)) if selected_rows else 0
+    eval_domain_rows = selected_rows[:eval_count]
+    train_domain_rows = selected_rows[eval_count:]
+    write_cached_domain_mix_v2_rows(train_domain_rows, eval_domain_rows)
+    return train_rows + train_domain_rows, eval_rows + eval_domain_rows
+
+
+def build_domain_mix_v2_rows() -> list[str]:
+    from datasets import load_dataset
+
+    rows: list[str] = []
+    print("Building capitalization_domain_mix_v2 rows from source datasets.", flush=True)
+
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "pubmed-summarization",
+            lambda: load_dataset("ccdv/pubmed-summarization", split="train[:100000]"),
+            ("article", "abstract"),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "billsum",
+            lambda: load_dataset("billsum", split="train"),
+            ("text", "summary", "title"),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "lex_glue/scotus",
+            lambda: load_dataset("lex_glue", "scotus", split="train"),
+            ("text",),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "scierc-relations",
+            lambda: load_dataset("nsusemiehl/SciERC", split="train"),
+            ("text",),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "scientbank",
+            lambda: load_dataset("nkazi/SciEntsBank", split="train"),
+            ("question", "reference_answer", "student_answer"),
+        )
+    )
+
+    for config in ("emoji", "irony", "offensive", "sentiment", "emotion"):
+        rows.extend(
+            safe_text_rows_from_dataset(
+                f"tweet_eval/{config}",
+                lambda config=config: load_dataset("tweet_eval", config, split="train"),
+                ("text",),
+            )
+        )
+
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "trec",
+            lambda: load_dataset("lukasgarbas/trec", split="train"),
+            ("text",),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "sst5",
+            lambda: load_dataset("SetFit/sst5", split="train"),
+            ("text",),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "20_newsgroups",
+            lambda: load_dataset("SetFit/20_newsgroups", split="train"),
+            ("text",),
+        )
+    )
+    rows.extend(load_citation_sentiment_text_rows())
+
+    print(f"Built capitalization_domain_mix_v2 candidate rows: {len(rows)}", flush=True)
+    return rows
+
+
+def safe_text_rows_from_dataset(
+    source_name: str,
+    load_fn: Any,
+    columns: tuple[str, ...],
+) -> list[str]:
+    try:
+        dataset = load_fn()
+    except Exception as error:
+        print(f"Skipping {source_name}: failed to load dataset: {error}", flush=True)
+        return []
+
+    rows = text_rows_from_dataset(dataset, columns)
+    print(f"Prepared {source_name} case-positive chunks: {len(rows)}", flush=True)
+    return rows
+
+
+def load_citation_sentiment_text_rows() -> list[str]:
+    try:
+        import pandas as pd
+        from datasets import Dataset
+        from huggingface_hub import hf_hub_download
+
+        path = hf_hub_download(
+            "gaof23/citation_sentiment_corpus",
+            "citation_sentiment_corpus.csv",
+            repo_type="dataset",
+        )
+        frame = pd.read_csv(path)
+        if "Citation_Text" not in frame:
+            print("Skipping citation_sentiment_acl: missing Citation_Text column.", flush=True)
+            return []
+        dataset = Dataset.from_dict({"text": frame["Citation_Text"].fillna("").astype(str).tolist()})
+        return safe_text_rows_from_dataset(
+            "citation_sentiment_acl",
+            lambda: dataset,
+            ("text",),
+        )
+    except Exception as error:
+        print(f"Skipping citation_sentiment_acl: {error}", flush=True)
+        return []
+
+
 def real_acronym_cache_path() -> Path:
     work_root = os.environ.get("CAP_EMB_WORK_ROOT")
     if work_root:
@@ -521,8 +670,29 @@ def real_acronym_cache_path() -> Path:
     return root / "prepared_corpora" / "real_acronym_rows_v1.jsonl.gz"
 
 
+def domain_mix_v2_cache_path() -> Path:
+    work_root = os.environ.get("CAP_EMB_WORK_ROOT")
+    if work_root:
+        root = Path(work_root)
+    elif Path("/workspace/capitalization_embeddings").exists():
+        root = Path("/workspace/capitalization_embeddings")
+    else:
+        root = Path(".cache") / "capitalization_embeddings"
+    return root / "prepared_corpora" / "domain_mix_v2_rows.jsonl.gz"
+
+
 def load_cached_real_acronym_rows() -> tuple[list[str], list[str]] | None:
-    path = real_acronym_cache_path()
+    return load_cached_text_rows(real_acronym_cache_path(), "real-acronym")
+
+
+def load_cached_domain_mix_v2_rows() -> tuple[list[str], list[str]] | None:
+    return load_cached_text_rows(domain_mix_v2_cache_path(), "domain-mix-v2")
+
+
+def load_cached_text_rows(
+    path: Path,
+    cache_name: str,
+) -> tuple[list[str], list[str]] | None:
     if not path.exists():
         return None
 
@@ -536,7 +706,7 @@ def load_cached_real_acronym_rows() -> tuple[list[str], list[str]] | None:
             elif record.get("split") == "eval":
                 eval_rows.append(str(record["text"]))
     print(
-        f"Loaded cached real-acronym rows from {path}: "
+        f"Loaded cached {cache_name} rows from {path}: "
         f"train={len(train_rows)} eval={len(eval_rows)}",
         flush=True,
     )
@@ -547,7 +717,32 @@ def write_cached_real_acronym_rows(
     train_rows: list[str],
     eval_rows: list[str],
 ) -> None:
-    path = real_acronym_cache_path()
+    write_cached_text_rows(
+        real_acronym_cache_path(),
+        train_rows,
+        eval_rows,
+        "real-acronym",
+    )
+
+
+def write_cached_domain_mix_v2_rows(
+    train_rows: list[str],
+    eval_rows: list[str],
+) -> None:
+    write_cached_text_rows(
+        domain_mix_v2_cache_path(),
+        train_rows,
+        eval_rows,
+        "domain-mix-v2",
+    )
+
+
+def write_cached_text_rows(
+    path: Path,
+    train_rows: list[str],
+    eval_rows: list[str],
+    cache_name: str,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(path.suffix + ".tmp")
     with gzip.open(temporary_path, "wt", encoding="utf-8") as handle:
@@ -557,7 +752,7 @@ def write_cached_real_acronym_rows(
             handle.write(json.dumps({"split": "eval", "text": row}) + "\n")
     temporary_path.replace(path)
     print(
-        f"Cached real-acronym rows to {path}: "
+        f"Cached {cache_name} rows to {path}: "
         f"train={len(train_rows)} eval={len(eval_rows)}",
         flush=True,
     )
@@ -578,16 +773,17 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
                 for column in columns:
                     values = examples.get(column, [])
                     value = values[row_index] if row_index < len(values) else None
-                    if isinstance(value, str):
-                        parts.append(value)
+                    text_value = text_from_value(value)
+                    if text_value:
+                        parts.append(text_value)
                 text = " ".join(parts)
                 row_chunks = []
                 if text:
                     for chunk in chunk_text(text):
-                        if acronym_score(chunk) > 0:
+                        if case_signal_score(chunk) > 0:
                             row_chunks.append(chunk)
                 chunked_rows.append(row_chunks)
-            return {"acronym_chunks": chunked_rows}
+            return {"case_chunks": chunked_rows}
 
         mapped = dataset.map(
             chunk_batch,
@@ -599,11 +795,11 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
         )
         rows = [
             chunk
-            for chunked_row in mapped["acronym_chunks"]
+            for chunked_row in mapped["case_chunks"]
             for chunk in chunked_row
         ]
         print(
-            "Prepared acronym-positive chunks from source dataset: "
+            "Prepared case-positive chunks from source dataset: "
             f"{len(rows)}",
             flush=True,
         )
@@ -620,14 +816,33 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
         parts = []
         for column in columns:
             value = row.get(column)
-            if isinstance(value, str):
-                parts.append(value)
+            text_value = text_from_value(value)
+            if text_value:
+                parts.append(text_value)
         text = " ".join(parts)
         if text:
             for chunk in chunk_text(text):
-                if acronym_score(chunk) > 0:
+                if case_signal_score(chunk) > 0:
                     rows.append(chunk)
     return rows
+
+
+def text_from_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="ignore")
+    if isinstance(value, (list, tuple)):
+        return " ".join(text for item in value if (text := text_from_value(item)))
+    if isinstance(value, dict):
+        return " ".join(
+            text
+            for key in sorted(value)
+            if (text := text_from_value(value[key]))
+        )
+    return ""
 
 
 def chunk_text(text: str, *, words_per_chunk: int = 96) -> list[str]:
@@ -649,6 +864,26 @@ def select_acronym_rich_rows(rows: list[str], *, max_rows: int) -> list[str]:
     return [row for _, _, row in scored_rows[:max_rows]]
 
 
+def select_case_rich_rows(
+    rows: list[str],
+    *,
+    max_rows: int,
+    min_score: int = 1,
+) -> list[str]:
+    scored_rows = []
+    seen = set()
+    for index, row in enumerate(rows):
+        normalized = " ".join(row.split())
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        score = case_signal_score(normalized)
+        if score >= min_score:
+            scored_rows.append((score, index, normalized))
+    scored_rows.sort(key=lambda item: (-item[0], item[1]))
+    return [row for _, _, row in scored_rows[:max_rows]]
+
+
 def acronym_score(text: str) -> int:
     score = 0
     for word in text.split():
@@ -659,6 +894,23 @@ def acronym_score(text: str) -> int:
             score += 3 if len(letters) > 2 else 1
         elif word[:1].isupper() and any(character.isupper() for character in word[1:]):
             score += 1
+    return score
+
+
+def case_signal_score(text: str) -> int:
+    score = 0
+    for word in text.split():
+        letters = [character for character in word if character.isalpha()]
+        if len(letters) < 2:
+            continue
+        if all(character.isupper() for character in letters):
+            score += 4 if len(letters) > 2 else 1
+        elif all(character.islower() for character in letters):
+            continue
+        elif word[:1].isupper() and all(character.islower() for character in letters[1:]):
+            score += 1
+        elif any(character.isupper() for character in letters[1:]):
+            score += 3
     return score
 
 

@@ -42,6 +42,28 @@ fourth class.
 Matched cased and uncased controls receive the same real-acronym continuation
 recipe without the capitalization architecture.
 
+### Domain Mix V2 Pretraining Probe
+
+The next pretraining probe is `capitalization_domain_mix_v2`, documented in
+`PRETRAINING_CORPORA.md`. It is not part of the current locked headline table
+until its matched checkpoints and downstream diagnostics complete.
+
+The V2 probe exists to answer two reviewer-sensitive questions:
+
+1. whether the current capitalized model benefits from larger, more
+   domain-targeted case-rich pretraining;
+2. whether any gain remains when cased and uncased controls receive the same
+   extra continuation budget.
+
+Do not compare a V2 capitalized checkpoint against older non-V2 controls in a
+headline result. V2 comparisons must use:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/uncased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/cased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/capitalized_from_mixed_case_current_steps3000_lr2e5/final
+```
+
 ## Downstream Fine-Tuning
 
 Default downstream settings:

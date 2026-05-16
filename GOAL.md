@@ -150,3 +150,13 @@ Active non-GPU work before restarting RunPod:
    context compaction.
 3. Restart RunPod only when the next step is one of the locked GPU ablations or
    seed expansions.
+
+Active GPU-pretraining probe:
+
+1. Run `scripts/run_domain_mix_v2_pretraining.sh` to test a larger,
+   domain-targeted, case-rich continued-pretraining corpus.
+2. Use only matched V2 checkpoints against each other:
+   `uncased_from_round2_steps3000_lr2e5`, `cased_from_round2_steps3000_lr2e5`,
+   and `capitalized_from_mixed_case_current_steps3000_lr2e5`.
+3. Run `scripts/run_domain_mix_v2_diagnostics.sh` before deciding whether V2
+   should replace the current paper checkpoint or remain an appendix result.

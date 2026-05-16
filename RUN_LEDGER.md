@@ -606,6 +606,83 @@ three_class_existing
   kaggle_walia_ner:  0.835011 +/- 0.006435
 ```
 
+## 2026-05-16 Domain Mix V2 Matched Continued Pretraining
+
+Status: planned.
+
+Reason:
+
+The current best capitalized checkpoint uses a second 3k-step mixed-case/dropout
+continuation that cased/uncased controls did not receive in exactly the same
+form. Before spending more GPU on downstream seeds, run a cleaner pretraining
+diagnostic:
+
+1. give cased and uncased controls a second 3k-step real-acronym continuation
+   from their current matched checkpoints;
+2. run the same additional 3k-step `capitalization_domain_mix_v2` continuation
+   for all three model families;
+3. evaluate whether larger, domain-targeted case-rich pretraining improves the
+   known failure slices without damaging the token-task wins.
+
+New corpus:
+
+```text
+capitalization_domain_mix_v2
+```
+
+Corpus recipe:
+
+```text
+Base rows: CoNLL-2003, WNUT-17, OntoNotes5, PTB POS train text.
+Large case-rich rows: PubMed summarization, BillSum, LexGLUE SCOTUS,
+SciERC train text, SciEntsBank train text, TweetEval train text
+(emoji/irony/offensive/sentiment/emotion), TREC train text, SST-5 train
+text, 20 Newsgroups train text, ACL citation sentiment text.
+Selection: deterministic top 180k unique rows by case-signal score; up to the
+first 10k selected rows are held out for MLM eval and the remainder are
+training rows.
+Cache: /workspace/capitalization_embeddings/prepared_corpora/domain_mix_v2_rows.jsonl.gz
+```
+
+Pretraining launcher:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_domain_mix_v2_pretraining.sh 2>&1 | tee /workspace/capitalization_embeddings/logs/domain_mix_v2_pretraining.log
+```
+
+Checkpoint outputs:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/uncased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/cased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/capitalized_from_mixed_case_current_steps3000_lr2e5/final
+```
+
+Diagnostic launcher after all V2 checkpoints exist:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_domain_mix_v2_diagnostics.sh 2>&1 | tee /workspace/capitalization_embeddings/logs/domain_mix_v2_diagnostics.log
+```
+
+Diagnostic result root:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/domain_mix_v2_diagnostics_3seed
+```
+
+Diagnostic tasks:
+
+```text
+Guardrails: conll2003_ner, wnut17_ner
+Failure/uncased-favored slices: tweet_eval_emoji, trec_fine,
+scientific_relations_combined, tweet_eval_irony, twenty_newsgroups
+Seeds: 13 21 34
+```
+
 ### Added Cased-Favored Benchmark 5-Seed Run
 
 Status: completed.
