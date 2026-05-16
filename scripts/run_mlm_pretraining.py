@@ -582,7 +582,9 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
                         parts.append(value)
                 text = " ".join(parts)
                 if text:
-                    chunked_rows.extend(chunk_text(text))
+                    for chunk in chunk_text(text):
+                        if acronym_score(chunk) > 0:
+                            chunked_rows.append(chunk)
             return {"text": chunked_rows}
 
         mapped = dataset.map(
@@ -593,7 +595,13 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
             num_proc=workers if workers > 1 else None,
             desc="Chunking acronym source text",
         )
-        return list(mapped["text"])
+        rows = list(mapped["text"])
+        print(
+            "Prepared acronym-positive chunks from source dataset: "
+            f"{len(rows)}",
+            flush=True,
+        )
+        return rows
     except Exception as error:
         print(
             "Parallel text chunking failed; falling back to row iteration: "
