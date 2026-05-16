@@ -523,6 +523,55 @@ or apply_holm processes remain.
 The GPU pod can be stopped after this point if no further interactive work is
 needed.
 
+## 2026-05-16 Case-Channel Ablation Rerun, Batch-64
+
+Reason:
+
+The initial `scripts/run_case_ablation_batch.sh` ablation run used token batch
+size 16. On the RunPod RTX 4090, Walia NER used only about 3 GB VRAM and took
+roughly 40 minutes per seed. After `three_class_existing/conll2003_ner` reached
+5/5 rows and `three_class_existing/kaggle_walia_ner` reached 2/5 rows, the
+low-batch wrapper was stopped to avoid spending many more GPU-hours.
+
+To keep the experiment table clean, the faster run writes to a separate result
+root rather than mixing batch-16 and batch-64 rows.
+
+Launcher:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_case_ablation_batch_b64.sh
+```
+
+Result root:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/ablations_case_channel_5seed_b64
+```
+
+Log root:
+
+```text
+/workspace/capitalization_embeddings/logs/ablations_case_channel_b64
+```
+
+Protocol:
+
+```text
+Models: capitalized_pretrained only
+Variants:
+  - three_class_existing
+  - four_class_dropout_current_best
+  - four_class_no_dropout
+  - four_class_no_aux_loss
+Tasks: conll2003_ner, kaggle_walia_ner
+Seeds: 13, 21, 34, 55, 89
+Epochs: 3
+Token batch size: 64
+Learning rate: 3e-5
+Save models: no
+```
+
 ### Added Cased-Favored Benchmark 5-Seed Run
 
 Status: completed.
