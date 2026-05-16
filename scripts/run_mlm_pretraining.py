@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import numbers
+import os
 import random
 from pathlib import Path
 from typing import Any
@@ -473,9 +475,15 @@ def add_real_acronym_rows(
     train_rows: list[str],
     eval_rows: list[str],
 ) -> tuple[list[str], list[str]]:
+    cached = load_cached_real_acronym_rows()
+    if cached is not None:
+        train_acronym_rows, eval_acronym_rows = cached
+        return train_rows + train_acronym_rows, eval_rows + eval_acronym_rows
+
     from datasets import load_dataset
 
     real_rows = []
+    print("Building real-acronym corpus rows from source datasets.", flush=True)
     real_rows.extend(
         text_rows_from_dataset(
             load_dataset("ccdv/pubmed-summarization", split="train[:50000]"),
@@ -498,7 +506,61 @@ def add_real_acronym_rows(
     acronym_rows = select_acronym_rich_rows(real_rows, max_rows=90000)
     eval_acronym_rows = acronym_rows[:5000]
     train_acronym_rows = acronym_rows[5000:]
+    write_cached_real_acronym_rows(train_acronym_rows, eval_acronym_rows)
     return train_rows + train_acronym_rows, eval_rows + eval_acronym_rows
+
+
+def real_acronym_cache_path() -> Path:
+    work_root = os.environ.get("CAP_EMB_WORK_ROOT")
+    if work_root:
+        root = Path(work_root)
+    elif Path("/workspace/capitalization_embeddings").exists():
+        root = Path("/workspace/capitalization_embeddings")
+    else:
+        root = Path(".cache") / "capitalization_embeddings"
+    return root / "prepared_corpora" / "real_acronym_rows_v1.jsonl.gz"
+
+
+def load_cached_real_acronym_rows() -> tuple[list[str], list[str]] | None:
+    path = real_acronym_cache_path()
+    if not path.exists():
+        return None
+
+    train_rows = []
+    eval_rows = []
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        for line in handle:
+            record = json.loads(line)
+            if record.get("split") == "train":
+                train_rows.append(str(record["text"]))
+            elif record.get("split") == "eval":
+                eval_rows.append(str(record["text"]))
+    print(
+        f"Loaded cached real-acronym rows from {path}: "
+        f"train={len(train_rows)} eval={len(eval_rows)}",
+        flush=True,
+    )
+    return train_rows, eval_rows
+
+
+def write_cached_real_acronym_rows(
+    train_rows: list[str],
+    eval_rows: list[str],
+) -> None:
+    path = real_acronym_cache_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(path.suffix + ".tmp")
+    with gzip.open(temporary_path, "wt", encoding="utf-8") as handle:
+        for row in train_rows:
+            handle.write(json.dumps({"split": "train", "text": row}) + "\n")
+        for row in eval_rows:
+            handle.write(json.dumps({"split": "eval", "text": row}) + "\n")
+    temporary_path.replace(path)
+    print(
+        f"Cached real-acronym rows to {path}: "
+        f"train={len(train_rows)} eval={len(eval_rows)}",
+        flush=True,
+    )
 
 
 def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
@@ -525,11 +587,11 @@ def chunk_text(text: str, *, words_per_chunk: int = 96) -> list[str]:
 
 
 def select_acronym_rich_rows(rows: list[str], *, max_rows: int) -> list[str]:
-    scored_rows = [
-        (acronym_score(row), index, row)
-        for index, row in enumerate(rows)
-        if acronym_score(row) > 0
-    ]
+    scored_rows = []
+    for index, row in enumerate(rows):
+        score = acronym_score(row)
+        if score > 0:
+            scored_rows.append((score, index, row))
     scored_rows.sort(key=lambda item: (-item[0], item[1]))
     return [row for _, _, row in scored_rows[:max_rows]]
 
