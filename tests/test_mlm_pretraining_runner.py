@@ -234,6 +234,16 @@ class MLMPretainingRunnerTests(unittest.TestCase):
         self.assertEqual(len(selected), 2)
         self.assertEqual(selected[0], "IBM FDA DNA RNA")
 
+    def test_stable_shuffle_rows_is_deterministic(self):
+        rows = ["a", "b", "c", "d", "e"]
+
+        first = self.runner.stable_shuffle_rows(rows, seed=13)
+        second = self.runner.stable_shuffle_rows(rows, seed=13)
+
+        self.assertEqual(first, second)
+        self.assertCountEqual(first, rows)
+        self.assertNotEqual(first, rows)
+
     def test_chunk_text_splits_long_documents(self):
         text = " ".join(f"WORD{i}" for i in range(36))
 

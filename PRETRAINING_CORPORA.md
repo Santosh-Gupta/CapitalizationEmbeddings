@@ -83,15 +83,19 @@ PTB POS train text
 Additional source training text:
 
 ```text
+Wikitext-103 train text
 PubMed summarization
 BillSum
 LexGLUE SCOTUS
+SemEval-2018 Task 7 relation train text
 SciERC train text
 SciEntsBank train text
 TweetEval train text: emoji, irony, offensive, sentiment, emotion
 TREC train text
 SST-5 train text
 20 Newsgroups train text
+GLUE STS-B train text
+Yahoo Answers Topics train[:100000] text
 ACL citation sentiment text
 ```
 
@@ -101,6 +105,7 @@ Selection:
 score rows by first-cap, all-caps, and mixed-case signals
 deduplicate normalized rows
 keep the top 180,000 rows with score >= 2
+shuffle the selected rows with fixed seed 13
 hold out up to the first 10,000 selected rows for MLM eval
 use the remaining rows for MLM training
 ```

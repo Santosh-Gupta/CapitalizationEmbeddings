@@ -532,6 +532,7 @@ def add_domain_mix_v2_rows(
 
     domain_rows = build_domain_mix_v2_rows()
     selected_rows = select_case_rich_rows(domain_rows, max_rows=180000, min_score=2)
+    selected_rows = stable_shuffle_rows(selected_rows, seed=13)
     eval_count = min(10000, max(1, len(selected_rows) // 20)) if selected_rows else 0
     eval_domain_rows = selected_rows[:eval_count]
     train_domain_rows = selected_rows[eval_count:]
@@ -545,6 +546,13 @@ def build_domain_mix_v2_rows() -> list[str]:
     rows: list[str] = []
     print("Building capitalization_domain_mix_v2 rows from source datasets.", flush=True)
 
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "wikitext103",
+            lambda: load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1", split="train"),
+            ("text",),
+        )
+    )
     rows.extend(
         safe_text_rows_from_dataset(
             "pubmed-summarization",
@@ -573,6 +581,7 @@ def build_domain_mix_v2_rows() -> list[str]:
             ("text",),
         )
     )
+    rows.extend(load_semeval2018_task7_train_text_rows())
     rows.extend(
         safe_text_rows_from_dataset(
             "scientbank",
@@ -609,6 +618,20 @@ def build_domain_mix_v2_rows() -> list[str]:
             "20_newsgroups",
             lambda: load_dataset("SetFit/20_newsgroups", split="train"),
             ("text",),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "glue/stsb",
+            lambda: load_dataset("glue", "stsb", split="train"),
+            ("sentence1", "sentence2"),
+        )
+    )
+    rows.extend(
+        safe_text_rows_from_dataset(
+            "yahoo_answers_topics",
+            lambda: load_dataset("yahoo_answers_topics", split="train[:100000]"),
+            ("question_title", "question_content", "best_answer"),
         )
     )
     rows.extend(load_citation_sentiment_text_rows())
@@ -656,6 +679,28 @@ def load_citation_sentiment_text_rows() -> list[str]:
         )
     except Exception as error:
         print(f"Skipping citation_sentiment_acl: {error}", flush=True)
+        return []
+
+
+def load_semeval2018_task7_train_text_rows() -> list[str]:
+    try:
+        from scripts.run_sequence_classification_benchmark import (
+            load_hf_parquet_dataset,
+            prepare_semeval2018_task7,
+        )
+
+        raw = load_hf_parquet_dataset("DFKI-SLT/SemEval2018_Task7", "Subtask_1_1")
+        prepared = prepare_semeval2018_task7(raw)
+        if "train" not in prepared:
+            print("Skipping semeval2018_task7: missing train split.", flush=True)
+            return []
+        return safe_text_rows_from_dataset(
+            "semeval2018_task7",
+            lambda: prepared["train"],
+            ("text",),
+        )
+    except Exception as error:
+        print(f"Skipping semeval2018_task7: {error}", flush=True)
         return []
 
 
@@ -882,6 +927,12 @@ def select_case_rich_rows(
             scored_rows.append((score, index, normalized))
     scored_rows.sort(key=lambda item: (-item[0], item[1]))
     return [row for _, _, row in scored_rows[:max_rows]]
+
+
+def stable_shuffle_rows(rows: list[str], *, seed: int) -> list[str]:
+    shuffled = list(rows)
+    random.Random(seed).shuffle(shuffled)
+    return shuffled
 
 
 def acronym_score(text: str) -> int:

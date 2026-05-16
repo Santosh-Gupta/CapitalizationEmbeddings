@@ -634,13 +634,15 @@ Corpus recipe:
 
 ```text
 Base rows: CoNLL-2003, WNUT-17, OntoNotes5, PTB POS train text.
-Large case-rich rows: PubMed summarization, BillSum, LexGLUE SCOTUS,
-SciERC train text, SciEntsBank train text, TweetEval train text
+Large case-rich rows: Wikitext-103 train text, PubMed summarization, BillSum,
+LexGLUE SCOTUS, SemEval-2018 Task 7 train text, SciERC train text,
+SciEntsBank train text, TweetEval train text
 (emoji/irony/offensive/sentiment/emotion), TREC train text, SST-5 train
-text, 20 Newsgroups train text, ACL citation sentiment text.
+text, 20 Newsgroups train text, GLUE STS-B train text,
+Yahoo Answers Topics train[:100000] text, ACL citation sentiment text.
 Selection: deterministic top 180k unique rows by case-signal score; up to the
-first 10k selected rows are held out for MLM eval and the remainder are
-training rows.
+top rows are shuffled with fixed seed 13; up to the first 10k shuffled rows are
+held out for MLM eval and the remainder are training rows.
 Cache: /workspace/capitalization_embeddings/prepared_corpora/domain_mix_v2_rows.jsonl.gz
 ```
 
