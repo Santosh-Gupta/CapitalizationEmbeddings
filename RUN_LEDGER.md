@@ -572,6 +572,40 @@ Learning rate: 3e-5
 Save models: no
 ```
 
+Final status:
+
+```text
+DONE 2026-05-16T18:50:11Z
+GPU idle after completion: 0 %, 2 MiB / 24564 MiB
+All 8 result files complete: 4 variants x 2 tasks x 5 seeds
+```
+
+Summary report:
+
+```text
+reports/case_channel_ablation_b64_5seed.md
+```
+
+Mean test F1:
+
+```text
+four_class_dropout_current_best
+  conll2003_ner:     0.911972 +/- 0.001666
+  kaggle_walia_ner:  0.836846 +/- 0.005355
+
+four_class_no_aux_loss
+  conll2003_ner:     0.911216 +/- 0.003689
+  kaggle_walia_ner:  0.836203 +/- 0.005220
+
+four_class_no_dropout
+  conll2003_ner:     0.910332 +/- 0.002034
+  kaggle_walia_ner:  0.836242 +/- 0.006351
+
+three_class_existing
+  conll2003_ner:     0.909972 +/- 0.001788
+  kaggle_walia_ner:  0.835011 +/- 0.006435
+```
+
 ### Added Cased-Favored Benchmark 5-Seed Run
 
 Status: completed.
