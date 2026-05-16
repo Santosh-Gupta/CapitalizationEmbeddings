@@ -564,6 +564,43 @@ def write_cached_real_acronym_rows(
 
 
 def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
+    try:
+        workers = max(1, min(8, os.cpu_count() or 1))
+
+        def chunk_batch(examples: dict[str, list[Any]]) -> dict[str, list[str]]:
+            batch_size = max(
+                (len(examples.get(column, [])) for column in columns),
+                default=0,
+            )
+            chunked_rows = []
+            for row_index in range(batch_size):
+                parts = []
+                for column in columns:
+                    values = examples.get(column, [])
+                    value = values[row_index] if row_index < len(values) else None
+                    if isinstance(value, str):
+                        parts.append(value)
+                text = " ".join(parts)
+                if text:
+                    chunked_rows.extend(chunk_text(text))
+            return {"text": chunked_rows}
+
+        mapped = dataset.map(
+            chunk_batch,
+            batched=True,
+            batch_size=64,
+            remove_columns=dataset.column_names,
+            num_proc=workers if workers > 1 else None,
+            desc="Chunking acronym source text",
+        )
+        return list(mapped["text"])
+    except Exception as error:
+        print(
+            "Parallel text chunking failed; falling back to row iteration: "
+            f"{error}",
+            flush=True,
+        )
+
     rows = []
     for row in dataset:
         parts = []
