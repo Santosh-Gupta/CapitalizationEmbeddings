@@ -567,7 +567,7 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
     try:
         workers = max(1, min(8, os.cpu_count() or 1))
 
-        def chunk_batch(examples: dict[str, list[Any]]) -> dict[str, list[str]]:
+        def chunk_batch(examples: dict[str, list[Any]]) -> dict[str, list[Any]]:
             batch_size = max(
                 (len(examples.get(column, [])) for column in columns),
                 default=0,
@@ -581,11 +581,13 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
                     if isinstance(value, str):
                         parts.append(value)
                 text = " ".join(parts)
+                row_chunks = []
                 if text:
                     for chunk in chunk_text(text):
                         if acronym_score(chunk) > 0:
-                            chunked_rows.append(chunk)
-            return {"chunk_text": chunked_rows}
+                            row_chunks.append(chunk)
+                chunked_rows.append(row_chunks)
+            return {"acronym_chunks": chunked_rows}
 
         mapped = dataset.map(
             chunk_batch,
@@ -595,7 +597,11 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
             num_proc=workers if workers > 1 else None,
             desc="Chunking acronym source text",
         )
-        rows = list(mapped["chunk_text"])
+        rows = [
+            chunk
+            for chunked_row in mapped["acronym_chunks"]
+            for chunk in chunked_row
+        ]
         print(
             "Prepared acronym-positive chunks from source dataset: "
             f"{len(rows)}",
