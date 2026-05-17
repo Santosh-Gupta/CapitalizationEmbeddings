@@ -139,6 +139,18 @@ Purpose:
   TweetEval Emoji, and scientific relations without damaging CoNLL/WNUT
   guardrails.
 
+Restart notes:
+
+```text
+first V2 launch was stopped before cache/training because SemEval18 import
+failed with "No module named 'scripts'";
+second V2 launch fixed SemEval18 but was stopped before cache/training because
+the Python selector spent about 30 minutes on one CPU core before writing the
+cache;
+the selector was then optimized with faster ASCII letter-run scoring and
+progress logging before relaunch.
+```
+
 Completed within this launcher:
 
 ```text

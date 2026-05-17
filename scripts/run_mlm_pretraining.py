@@ -9,6 +9,7 @@ import json
 import numbers
 import os
 import random
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,7 @@ CAPITALIZATION_STATE_KEYS = (
     "capitalization_classifier.weight",
     "capitalization_classifier.bias",
 )
+ASCII_LETTER_RUN_RE = re.compile(r"[A-Za-z]+")
 
 CORPUS_CHOICES = (
     "wikitext103",
@@ -924,7 +926,13 @@ def select_case_rich_rows(
     scored_rows = []
     seen = set()
     for index, row in enumerate(rows):
-        normalized = " ".join(row.split())
+        if index and index % 200000 == 0:
+            print(
+                "Scored capitalization_domain_mix_v2 candidates: "
+                f"seen={index} unique={len(seen)} kept={len(scored_rows)}",
+                flush=True,
+            )
+        normalized = normalize_text_row(row)
         if not normalized or normalized in seen:
             continue
         seen.add(normalized)
@@ -933,6 +941,13 @@ def select_case_rich_rows(
             scored_rows.append((score, index, normalized))
     scored_rows.sort(key=lambda item: (-item[0], item[1]))
     return [row for _, _, row in scored_rows[:max_rows]]
+
+
+def normalize_text_row(row: str) -> str:
+    stripped = row.strip()
+    if "\n" in stripped or "\t" in stripped or "  " in stripped:
+        return " ".join(stripped.split())
+    return stripped
 
 
 def stable_shuffle_rows(rows: list[str], *, seed: int) -> list[str]:
@@ -956,15 +971,15 @@ def acronym_score(text: str) -> int:
 
 def case_signal_score(text: str) -> int:
     score = 0
-    for word in text.split():
-        letters = [character for character in word if character.isalpha()]
+    for match in ASCII_LETTER_RUN_RE.finditer(text):
+        letters = match.group(0)
         if len(letters) < 2:
             continue
         if all(character.isupper() for character in letters):
             score += 4 if len(letters) > 2 else 1
         elif all(character.islower() for character in letters):
             continue
-        elif word[:1].isupper() and all(character.islower() for character in letters[1:]):
+        elif letters[:1].isupper() and all(character.islower() for character in letters[1:]):
             score += 1
         elif any(character.isupper() for character in letters[1:]):
             score += 3
