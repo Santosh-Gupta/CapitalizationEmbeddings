@@ -685,6 +685,20 @@ scientific_relations_combined, tweet_eval_irony, twenty_newsgroups
 Seeds: 13 21 34
 ```
 
+Transfer-prep command after any long GPU batch or before leaving RunPod:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+python scripts/build_transfer_manifest.py
+```
+
+Full checksum manifest, only when GPU work is stopped or close to stopping:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+python scripts/build_transfer_manifest.py --with-sha256
+```
+
 ### Added Cased-Favored Benchmark 5-Seed Run
 
 Status: completed.

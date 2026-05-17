@@ -64,6 +64,10 @@ Continued-pretraining corpora and matched-control rules are tracked in
 [PRETRAINING_CORPORA.md](PRETRAINING_CORPORA.md). Update it before adding any
 new MLM corpus or pretraining checkpoint family.
 
+GPU-provider migration steps are tracked in
+[TRANSFER_RUNBOOK.md](TRANSFER_RUNBOOK.md). Generate a transfer manifest before
+moving checkpoints off the RunPod network volume.
+
 ## Colab Workflow
 
 Clone or upload this repo to Colab, then run from the repo root:
