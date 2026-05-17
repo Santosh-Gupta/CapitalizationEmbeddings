@@ -182,6 +182,53 @@ After completion:
    `PAPER_EVIDENCE_STATUS.md` with actual endpoint metrics and diagnostic
    outcomes.
 
+Completed endpoint metrics:
+
+```text
+uncased V2:
+train_loss=1.570302
+eval_loss=1.932652
+final=/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/uncased_from_round2_steps3000_lr2e5/final
+
+cased V2:
+train_loss=1.513988
+eval_loss=1.848299
+final=/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/cased_from_round2_steps3000_lr2e5/final
+
+capitalized V2:
+train_loss=1.625761
+eval_loss=1.988588
+eval_capitalization_accuracy=0.930798
+eval_capitalization_first_cap_accuracy=0.876923
+eval_capitalization_all_caps_accuracy=0.844444
+final=/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/capitalized_from_mixed_case_current_steps3000_lr2e5/final
+```
+
+Transfer manifest after V2:
+
+```text
+generated_at_utc=2026-05-17T07:00:40Z
+file_count=1409
+total_gib=45.827
+checkpoints_gib=45.647
+repo_commit=a6b82739e46ed431296540f48686bd34bca40bce
+```
+
+Budget diagnostic launcher prepared for remaining RunPod credits:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_domain_mix_v2_budget_diagnostics.sh
+```
+
+This runs seed 13 only for all three V2 model families on:
+
+```text
+token: conll2003_ner, wnut17_ner
+sequence: tweet_eval_emoji, trec_fine, scientific_relations_combined,
+tweet_eval_irony, twenty_newsgroups
+```
+
 ### Case-Channel Ablation Batch
 
 Status: planned; script prepared locally, not yet launched.
