@@ -104,6 +104,12 @@ observed RunPod run, likely because that dataset's fields were not plain strings
 in the loaded version. The v2 corpus fixes extraction by recursively flattening
 string-like nested values.
 
+Observed v2 note: `ccdv/pubmed-summarization` itself appears lowercased in the
+Hugging Face copy used on RunPod, so it can still produce zero case-positive
+chunks even with recursive extraction. This is acceptable for a
+capitalization-focused corpus, but should be documented rather than treated as
+a loader failure.
+
 ## `capitalization_domain_mix_v2`
 
 Purpose:
@@ -156,6 +162,12 @@ Cache:
 ```text
 /workspace/capitalization_embeddings/prepared_corpora/domain_mix_v2_rows.jsonl.gz
 ```
+
+If a source silently drops out, fix it before using the V2 checkpoint as
+headline evidence. During the first V2 launch, SemEval18 Task 7 was skipped
+because `python scripts/run_mlm_pretraining.py` did not put the repo root on
+`sys.path`; this was fixed by adding the repo root before importing helper
+modules from `scripts`.
 
 ## Matched V2 Protocol
 
