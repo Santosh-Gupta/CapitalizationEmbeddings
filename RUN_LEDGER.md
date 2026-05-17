@@ -7,7 +7,7 @@ after context compression.
 
 ```text
 host: root@203.57.40.173 -p 10267
-current host after redeploy: root@203.57.40.158 -p 10019
+current host after redeploy: root@203.57.40.91 -p 10095
 repo: /workspace/repos/CapitalizationEmbeddings
 checkpoint root: /workspace/capitalization_embeddings/checkpoints
 log root: /workspace/capitalization_embeddings/logs
@@ -89,6 +89,86 @@ twenty_newsgroups
 ```
 
 ## Active Or Next Batch
+
+### Matched Domain-Mix V2 Pretraining
+
+Status: active on RunPod 4090.
+
+Started: 2026-05-17 UTC.
+
+Known budget at launch window:
+
+```text
+user-reported balance: about $7.36
+GPU price: $0.69/hour
+estimated maximum runtime from that balance: about 10.7 GPU-hours
+```
+
+Exact RunPod wallet balance is not monitored in-chat. If exact polling is
+needed, use a fresh provider token stored outside chat in an environment
+variable. In this ledger, use elapsed pod/runtime estimates.
+
+Current host:
+
+```text
+ssh root@203.57.40.91 -p 10095 -i ~/.ssh/id_ed25519
+```
+
+Launcher:
+
+```bash
+cd /workspace/repos/CapitalizationEmbeddings
+bash scripts/run_domain_mix_v2_pretraining.sh
+```
+
+PID/log:
+
+```text
+/workspace/capitalization_embeddings/logs/domain_mix_v2_pretraining.pid
+/workspace/capitalization_embeddings/logs/domain_mix_v2_pretraining.log
+```
+
+Purpose:
+
+- First compute-match cased/uncased controls with a second 3k-step
+  `capitalization_real_acronym_mix` continuation.
+- Then train all three model families for the same 3k-step
+  `capitalization_domain_mix_v2` continuation with fixed corpus selection and
+  randomization.
+- Evaluate whether broader case-rich/domain text fixes failures on TREC Fine,
+  TweetEval Emoji, and scientific relations without damaging CoNLL/WNUT
+  guardrails.
+
+Completed within this launcher:
+
+```text
+uncased round2 final:
+/workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/uncased_round2_steps3000_lr2e5/final
+train_loss: 1.234969
+eval_loss: 1.930969
+
+cased round2 final:
+/workspace/capitalization_embeddings/checkpoints/mlm/real_acronym_mix/cased_round2_steps3000_lr2e5/final
+train_loss: 1.204005
+eval_loss: 1.895399
+```
+
+Expected V2 final checkpoints:
+
+```text
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/uncased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/cased_from_round2_steps3000_lr2e5/final
+/workspace/capitalization_embeddings/checkpoints/mlm/domain_mix_v2/capitalized_from_mixed_case_current_steps3000_lr2e5/final
+```
+
+After completion:
+
+1. Regenerate the transfer manifest with
+   `python scripts/build_transfer_manifest.py`.
+2. If budget remains, run `bash scripts/run_domain_mix_v2_diagnostics.sh`.
+3. Update this ledger, `PRETRAINING_CORPORA.md`, and
+   `PAPER_EVIDENCE_STATUS.md` with actual endpoint metrics and diagnostic
+   outcomes.
 
 ### Case-Channel Ablation Batch
 
