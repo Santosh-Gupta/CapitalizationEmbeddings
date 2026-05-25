@@ -210,3 +210,42 @@ next GPU step is a longer matched V2 run, likely 10k or 20k steps for all three
 model families. If V2 mostly improves all models equally or hurts the
 capitalized guardrails, keep the current mixed-case/dropout checkpoint as the
 paper model and report V2 as a negative/diagnostic result.
+
+## V3 Redesign
+
+V3 supersedes V2 as the next-provider pretraining plan. See
+`PRETRAINING_V3_PLAN.md`.
+
+Implemented corpus names:
+
+```text
+capitalization_v3_general
+capitalization_v3_domain_train
+capitalization_v3_mixed_curriculum
+```
+
+Implemented caches:
+
+```text
+/workspace/capitalization_embeddings/prepared_corpora/v3_general_rows.jsonl.gz
+/workspace/capitalization_embeddings/prepared_corpora/v3_domain_train_rows.jsonl.gz
+/workspace/capitalization_embeddings/prepared_corpora/v3_mixed_curriculum_rows.jsonl.gz
+/workspace/capitalization_embeddings/prepared_corpora/v3_corpus_manifest.jsonl.gz
+```
+
+V3 differs from V2 in three important ways:
+
+1. General natural-casing text is separated from train-split domain-adaptive
+   text, so the paper can report both a clean general-pretraining result and a
+   maximum-practical DAPT result.
+2. Row selection is stratified by capitalization bucket rather than taking only
+   the highest case-signal rows.
+3. The launch protocol includes a matched warmup stage where cased/uncased
+   receive same-step MLM continuation and the cap model trains only the
+   capitalization parameters.
+
+Provider launch script:
+
+```bash
+bash scripts/run_v3_pretraining.sh
+```

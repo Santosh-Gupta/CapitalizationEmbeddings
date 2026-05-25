@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import gzip
 import json
 import numbers
@@ -44,7 +45,37 @@ CORPUS_CHOICES = (
     "capitalization_task_mix_augmented",
     "capitalization_real_acronym_mix",
     "capitalization_domain_mix_v2",
+    "capitalization_v3_general",
+    "capitalization_v3_domain_train",
+    "capitalization_v3_mixed_curriculum",
 )
+V3_CORPORA = {
+    "capitalization_v3_general",
+    "capitalization_v3_domain_train",
+    "capitalization_v3_mixed_curriculum",
+}
+V3_CACHE_FILENAMES = {
+    "capitalization_v3_general": "v3_general_rows.jsonl.gz",
+    "capitalization_v3_domain_train": "v3_domain_train_rows.jsonl.gz",
+    "capitalization_v3_mixed_curriculum": "v3_mixed_curriculum_rows.jsonl.gz",
+}
+V3_BUCKET_FRACTIONS = {
+    "ordinary": 0.45,
+    "low_case_signal": 0.10,
+    "first_cap_rich": 0.20,
+    "all_caps_rich": 0.15,
+    "mixed_case_rich": 0.10,
+}
+V3_MAX_ROWS = {
+    "capitalization_v3_general": 300_000,
+    "capitalization_v3_domain_train": 150_000,
+    "capitalization_v3_mixed_curriculum": 450_000,
+}
+V3_SOURCE_CAP = {
+    "capitalization_v3_general": 75_000,
+    "capitalization_v3_domain_train": 35_000,
+    "capitalization_v3_mixed_curriculum": 100_000,
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,6 +127,15 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.0,
         help="Dropout applied to capitalization embeddings during training.",
+    )
+    parser.add_argument(
+        "--freeze-non-capitalization-parameters",
+        action="store_true",
+        help=(
+            "For capitalized models, train only capitalization embeddings and "
+            "the auxiliary capitalization classifier. Intended for short V3 "
+            "warmups."
+        ),
     )
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--max-train-samples", type=int, default=0)
@@ -234,7 +274,30 @@ def load_model_and_tokenizer(
             )
     else:
         model = AutoModelForMaskedLM.from_pretrained(initial_checkpoint or model_spec["model_name"])
+    if (
+        args is not None
+        and args.freeze_non_capitalization_parameters
+        and model_spec["kind"] == "capitalized"
+    ):
+        freeze_non_capitalization_parameters(model)
     return tokenizer, model
+
+
+def freeze_non_capitalization_parameters(model: Any) -> None:
+    trainable_names = []
+    for name, parameter in model.named_parameters():
+        trainable = (
+            "capitalization_embeddings" in name
+            or "capitalization_classifier" in name
+        )
+        parameter.requires_grad = trainable
+        if trainable:
+            trainable_names.append(name)
+    print(
+        "Frozen non-capitalization parameters; trainable parameters: "
+        + json.dumps(trainable_names, sort_keys=True),
+        flush=True,
+    )
 
 
 def restore_overlapping_capitalization_state(model: Any, checkpoint: str) -> None:
@@ -438,6 +501,14 @@ def load_raw_corpus(corpus: str) -> tuple[Any, Any, str]:
             "text",
         )
 
+    if corpus in V3_CORPORA:
+        train_rows, eval_rows = v3_corpus_rows(corpus)
+        return (
+            Dataset.from_dict({"text": train_rows}),
+            Dataset.from_dict({"text": eval_rows}),
+            "text",
+        )
+
     raise ValueError(f"Unsupported corpus {corpus!r}.")
 
 
@@ -548,6 +619,39 @@ def add_domain_mix_v2_rows(
     return train_rows + train_domain_rows, eval_rows + eval_domain_rows
 
 
+def v3_corpus_rows(corpus: str) -> tuple[list[str], list[str]]:
+    cached = load_cached_v3_rows(corpus)
+    if cached is not None:
+        return cached
+
+    records = build_v3_corpus_records(corpus)
+    selected = select_v3_records(
+        records,
+        max_rows=V3_MAX_ROWS[corpus],
+        source_cap=V3_SOURCE_CAP[corpus],
+        seed=13,
+    )
+    selected = stable_shuffle_records(selected, seed=13)
+    eval_count = min(10_000, max(1, len(selected) // 20)) if selected else 0
+    eval_records = selected[:eval_count]
+    train_records = selected[eval_count:]
+    write_cached_v3_rows(corpus, train_records, eval_records)
+    return (
+        [record["text"] for record in train_records],
+        [record["text"] for record in eval_records],
+    )
+
+
+def build_v3_corpus_records(corpus: str) -> list[dict[str, Any]]:
+    if corpus == "capitalization_v3_general":
+        return build_v3_general_records()
+    if corpus == "capitalization_v3_domain_train":
+        return build_v3_domain_train_records()
+    if corpus == "capitalization_v3_mixed_curriculum":
+        return build_v3_general_records() + build_v3_domain_train_records()
+    raise ValueError(f"Unsupported V3 corpus {corpus!r}.")
+
+
 def build_domain_mix_v2_rows() -> list[str]:
     from datasets import load_dataset
 
@@ -648,6 +752,285 @@ def build_domain_mix_v2_rows() -> list[str]:
     return rows
 
 
+def build_v3_general_records() -> list[dict[str, Any]]:
+    """Build general natural-casing V3 rows without benchmark train splits."""
+
+    from datasets import load_dataset
+
+    records: list[dict[str, Any]] = []
+    print("Building capitalization_v3_general records.", flush=True)
+    records.extend(
+        safe_v3_records_from_dataset(
+            "wikitext103",
+            "train",
+            lambda: load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1", split="train"),
+            ("text",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "pubmed-summarization",
+            "train[:100000]",
+            lambda: load_dataset("ccdv/pubmed-summarization", split="train[:100000]"),
+            ("article", "abstract"),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "billsum",
+            "train",
+            lambda: load_dataset("billsum", split="train"),
+            ("text", "summary", "title"),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "lex_glue/scotus",
+            "train",
+            lambda: load_dataset("lex_glue", "scotus", split="train"),
+            ("text",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "arxiv-summarization",
+            "train[:100000]",
+            lambda: load_dataset("ccdv/arxiv-summarization", split="train[:100000]"),
+            ("article", "abstract"),
+            min_case_signal=0,
+        )
+    )
+    print(f"Built capitalization_v3_general candidate records: {len(records)}", flush=True)
+    return records
+
+
+def build_v3_domain_train_records() -> list[dict[str, Any]]:
+    """Build train-split-only V3 domain adaptation rows.
+
+    Labels are never used. Validation and test splits are intentionally excluded.
+    """
+
+    from datasets import load_dataset
+
+    records: list[dict[str, Any]] = []
+    print("Building capitalization_v3_domain_train records.", flush=True)
+    records.extend(
+        safe_v3_records_from_dataset(
+            "conll2003_ner",
+            "train",
+            lambda: load_dataset("lhoestq/conll2003", split="train"),
+            ("tokens",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "wnut17_ner",
+            "train",
+            lambda: load_dataset("flaitenberger/wnut_17", split="train"),
+            ("tokens",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "ontonotes5_ner",
+            "train",
+            lambda: load_dataset("extraordinarylab/ontonotes5", split="train"),
+            ("tokens",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "ptb_pos",
+            "train",
+            lambda: load_dataset("batterydata/pos_tagging", split="train"),
+            ("words",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(v3_records_from_walia_ner())
+
+    for config in ("emoji", "irony", "offensive", "sentiment", "emotion"):
+        records.extend(
+            safe_v3_records_from_dataset(
+                f"tweet_eval/{config}",
+                "train",
+                lambda config=config: load_dataset("tweet_eval", config, split="train"),
+                ("text",),
+                min_case_signal=0,
+            )
+        )
+
+    records.extend(
+        safe_v3_records_from_dataset(
+            "trec_fine",
+            "train",
+            lambda: load_dataset("lukasgarbas/trec", split="train"),
+            ("text",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "sst5",
+            "train",
+            lambda: load_dataset("SetFit/sst5", split="train"),
+            ("text",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "20_newsgroups",
+            "train",
+            lambda: load_dataset("SetFit/20_newsgroups", split="train"),
+            ("text",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "glue/stsb",
+            "train",
+            lambda: load_dataset("glue", "stsb", split="train"),
+            ("sentence1", "sentence2"),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "yahoo_answers_topics",
+            "train[:100000]",
+            lambda: load_dataset("yahoo_answers_topics", split="train[:100000]"),
+            ("question_title", "question_content", "best_answer"),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "scierc_relations",
+            "train",
+            lambda: load_dataset("nsusemiehl/SciERC", split="train"),
+            ("text",),
+            min_case_signal=0,
+        )
+    )
+    records.extend(
+        safe_v3_records_from_dataset(
+            "scientbank",
+            "train",
+            lambda: load_dataset("nkazi/SciEntsBank", split="train"),
+            ("question", "reference_answer", "student_answer"),
+            min_case_signal=0,
+        )
+    )
+    records.extend(v3_records_from_semeval2018_task7())
+    records.extend(v3_records_from_citation_sentiment())
+    records.extend(v3_records_from_isarcasm_eval_en())
+    print(f"Built capitalization_v3_domain_train candidate records: {len(records)}", flush=True)
+    return records
+
+
+def safe_v3_records_from_dataset(
+    source_name: str,
+    source_split: str,
+    load_fn: Any,
+    columns: tuple[str, ...],
+    *,
+    min_case_signal: int,
+) -> list[dict[str, Any]]:
+    try:
+        dataset = load_fn()
+    except Exception as error:
+        print(f"Skipping {source_name}: failed to load dataset: {error}", flush=True)
+        return []
+
+    rows = text_rows_from_dataset(
+        dataset,
+        columns,
+        min_case_signal=min_case_signal,
+    )
+    records = [
+        make_v3_record(row, source_name, source_split, index)
+        for index, row in enumerate(rows)
+    ]
+    records = [record for record in records if record]
+    print(
+        f"Prepared {source_name} V3 chunks: {len(records)}",
+        flush=True,
+    )
+    return records
+
+
+def v3_records_from_semeval2018_task7() -> list[dict[str, Any]]:
+    rows = load_semeval2018_task7_train_text_rows()
+    return [
+        make_v3_record(row, "semeval2018_task7", "train", index)
+        for index, row in enumerate(rows)
+        if row
+    ]
+
+
+def v3_records_from_citation_sentiment() -> list[dict[str, Any]]:
+    rows = load_citation_sentiment_text_rows()
+    return [
+        make_v3_record(row, "citation_sentiment_acl", "train", index)
+        for index, row in enumerate(rows)
+        if row
+    ]
+
+
+def v3_records_from_walia_ner() -> list[dict[str, Any]]:
+    try:
+        from capitalization_embeddings.benchmarks import get_benchmark
+        from scripts.run_token_classification_benchmark import (
+            load_prepared_benchmark_dataset,
+        )
+
+        raw = load_prepared_benchmark_dataset(get_benchmark("kaggle_walia_ner"), seed=13)
+        if "train" not in raw:
+            print("Skipping kaggle_walia_ner: missing prepared train split.", flush=True)
+            return []
+        return safe_v3_records_from_dataset(
+            "kaggle_walia_ner",
+            "prepared_train_seed13",
+            lambda: raw["train"],
+            ("tokens",),
+            min_case_signal=0,
+        )
+    except Exception as error:
+        print(f"Skipping kaggle_walia_ner: {error}", flush=True)
+        return []
+
+
+def v3_records_from_isarcasm_eval_en() -> list[dict[str, Any]]:
+    try:
+        from scripts.run_sequence_classification_benchmark import (
+            load_isarcasm_eval_en,
+        )
+
+        raw = load_isarcasm_eval_en(seed=13)
+        if "train" not in raw:
+            print("Skipping isarcasm_eval_en: missing prepared train split.", flush=True)
+            return []
+        return safe_v3_records_from_dataset(
+            "isarcasm_eval_en",
+            "prepared_train_seed13",
+            lambda: raw["train"],
+            ("text",),
+            min_case_signal=0,
+        )
+    except Exception as error:
+        print(f"Skipping isarcasm_eval_en: {error}", flush=True)
+        return []
+
+
 def safe_text_rows_from_dataset(
     source_name: str,
     load_fn: Any,
@@ -734,12 +1117,56 @@ def domain_mix_v2_cache_path() -> Path:
     return root / "prepared_corpora" / "domain_mix_v2_rows.jsonl.gz"
 
 
+def v3_cache_path(corpus: str) -> Path:
+    work_root = os.environ.get("CAP_EMB_WORK_ROOT")
+    if work_root:
+        root = Path(work_root)
+    elif Path("/workspace/capitalization_embeddings").exists():
+        root = Path("/workspace/capitalization_embeddings")
+    else:
+        root = Path(".cache") / "capitalization_embeddings"
+    return root / "prepared_corpora" / V3_CACHE_FILENAMES[corpus]
+
+
+def v3_manifest_path() -> Path:
+    work_root = os.environ.get("CAP_EMB_WORK_ROOT")
+    if work_root:
+        root = Path(work_root)
+    elif Path("/workspace/capitalization_embeddings").exists():
+        root = Path("/workspace/capitalization_embeddings")
+    else:
+        root = Path(".cache") / "capitalization_embeddings"
+    return root / "prepared_corpora" / "v3_corpus_manifest.jsonl.gz"
+
+
 def load_cached_real_acronym_rows() -> tuple[list[str], list[str]] | None:
     return load_cached_text_rows(real_acronym_cache_path(), "real-acronym")
 
 
 def load_cached_domain_mix_v2_rows() -> tuple[list[str], list[str]] | None:
     return load_cached_text_rows(domain_mix_v2_cache_path(), "domain-mix-v2")
+
+
+def load_cached_v3_rows(corpus: str) -> tuple[list[str], list[str]] | None:
+    path = v3_cache_path(corpus)
+    if not path.exists():
+        return None
+
+    train_rows = []
+    eval_rows = []
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        for line in handle:
+            record = json.loads(line)
+            if record.get("split") == "train":
+                train_rows.append(str(record["text"]))
+            elif record.get("split") == "eval":
+                eval_rows.append(str(record["text"]))
+    print(
+        f"Loaded cached {corpus} rows from {path}: "
+        f"train={len(train_rows)} eval={len(eval_rows)}",
+        flush=True,
+    )
+    return train_rows, eval_rows
 
 
 def load_cached_text_rows(
@@ -790,6 +1217,66 @@ def write_cached_domain_mix_v2_rows(
     )
 
 
+def write_cached_v3_rows(
+    corpus: str,
+    train_records: list[dict[str, Any]],
+    eval_records: list[dict[str, Any]],
+) -> None:
+    path = v3_cache_path(corpus)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(path.suffix + ".tmp")
+    with gzip.open(temporary_path, "wt", encoding="utf-8") as handle:
+        for split, records in (("train", train_records), ("eval", eval_records)):
+            for record in records:
+                row = dict(record)
+                row["corpus"] = corpus
+                row["split"] = split
+                handle.write(json.dumps(row, sort_keys=True) + "\n")
+    temporary_path.replace(path)
+    update_v3_manifest(corpus, train_records, eval_records)
+    print(
+        f"Cached {corpus} rows to {path}: "
+        f"train={len(train_records)} eval={len(eval_records)}",
+        flush=True,
+    )
+
+
+def update_v3_manifest(
+    corpus: str,
+    train_records: list[dict[str, Any]],
+    eval_records: list[dict[str, Any]],
+) -> None:
+    path = v3_manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = []
+    if path.exists():
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if row.get("corpus") != corpus:
+                    existing.append(row)
+
+    new_rows = []
+    for split, records in (("train", train_records), ("eval", eval_records)):
+        for record in records:
+            row = {
+                key: value
+                for key, value in record.items()
+                if key != "text"
+            }
+            row["corpus"] = corpus
+            row["split"] = split
+            new_rows.append(row)
+
+    temporary_path = path.with_suffix(path.suffix + ".tmp")
+    with gzip.open(temporary_path, "wt", encoding="utf-8") as handle:
+        for row in existing + new_rows:
+            handle.write(json.dumps(row, sort_keys=True) + "\n")
+    temporary_path.replace(path)
+
+
 def write_cached_text_rows(
     path: Path,
     train_rows: list[str],
@@ -811,7 +1298,12 @@ def write_cached_text_rows(
     )
 
 
-def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
+def text_rows_from_dataset(
+    dataset: Any,
+    columns: tuple[str, ...],
+    *,
+    min_case_signal: int = 1,
+) -> list[str]:
     try:
         workers = max(1, min(8, os.cpu_count() or 1))
 
@@ -833,7 +1325,7 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
                 row_chunks = []
                 if text:
                     for chunk in chunk_text(text):
-                        if case_signal_score(chunk) > 0:
+                        if case_signal_score(chunk) >= min_case_signal:
                             row_chunks.append(chunk)
                 chunked_rows.append(row_chunks)
             return {"case_chunks": chunked_rows}
@@ -875,7 +1367,7 @@ def text_rows_from_dataset(dataset: Any, columns: tuple[str, ...]) -> list[str]:
         text = " ".join(parts)
         if text:
             for chunk in chunk_text(text):
-                if case_signal_score(chunk) > 0:
+                if case_signal_score(chunk) >= min_case_signal:
                     rows.append(chunk)
     return rows
 
@@ -941,6 +1433,192 @@ def select_case_rich_rows(
             scored_rows.append((score, index, normalized))
     scored_rows.sort(key=lambda item: (-item[0], item[1]))
     return [row for _, _, row in scored_rows[:max_rows]]
+
+
+def make_v3_record(
+    row: str,
+    source: str,
+    source_split: str,
+    source_index: int,
+) -> dict[str, Any]:
+    normalized = normalize_text_row(row)
+    if not normalized:
+        return {}
+    stats = capitalization_profile(normalized)
+    text_hash_value = text_hash(normalized)
+    return {
+        "text": normalized,
+        "source": source,
+        "source_split": source_split,
+        "source_index": source_index,
+        "text_hash": text_hash_value,
+        **stats,
+        "selected_bucket": classify_v3_bucket(stats),
+    }
+
+
+def capitalization_profile(text: str) -> dict[str, int]:
+    first_cap_count = 0
+    all_caps_count = 0
+    mixed_case_count = 0
+    lowercase_count = 0
+    for match in ASCII_LETTER_RUN_RE.finditer(text):
+        letters = match.group(0)
+        if len(letters) < 2:
+            continue
+        if all(character.isupper() for character in letters):
+            all_caps_count += 1
+        elif all(character.islower() for character in letters):
+            lowercase_count += 1
+        elif letters[:1].isupper() and all(character.islower() for character in letters[1:]):
+            first_cap_count += 1
+        else:
+            mixed_case_count += 1
+
+    return {
+        "row_length_words": len(text.split()),
+        "case_signal_score": case_signal_score(text),
+        "first_cap_count": first_cap_count,
+        "all_caps_count": all_caps_count,
+        "mixed_case_count": mixed_case_count,
+        "lowercase_count": lowercase_count,
+    }
+
+
+def classify_v3_bucket(profile: dict[str, int]) -> str:
+    if profile["mixed_case_count"] > 0:
+        return "mixed_case_rich"
+    if profile["all_caps_count"] >= 2:
+        return "all_caps_rich"
+    if profile["first_cap_count"] >= 3:
+        return "first_cap_rich"
+    if profile["case_signal_score"] > 0:
+        return "low_case_signal"
+    return "ordinary"
+
+
+def text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def select_v3_records(
+    records: list[dict[str, Any]],
+    *,
+    max_rows: int,
+    source_cap: int = 0,
+    seed: int = 13,
+    bucket_fractions: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    bucket_fractions = bucket_fractions or V3_BUCKET_FRACTIONS
+    unique_records = deduplicate_v3_records(records)
+    buckets: dict[str, list[dict[str, Any]]] = {
+        bucket: []
+        for bucket in bucket_fractions
+    }
+    for record in unique_records:
+        buckets.setdefault(record["selected_bucket"], []).append(record)
+
+    for bucket_records in buckets.values():
+        bucket_records.sort(key=lambda record: stable_v3_record_key(record, seed))
+
+    selected: list[dict[str, Any]] = []
+    selected_hashes: set[str] = set()
+    source_counts: dict[str, int] = {}
+    bucket_selected_counts: dict[str, int] = {}
+
+    for bucket, fraction in bucket_fractions.items():
+        quota = int(max_rows * fraction)
+        for record in buckets.get(bucket, []):
+            if bucket_selected_counts.get(bucket, 0) >= quota:
+                break
+            if add_v3_record_if_allowed(
+                record,
+                selected,
+                selected_hashes,
+                source_counts,
+                source_cap=source_cap,
+                max_rows=max_rows,
+            ):
+                bucket_selected_counts[bucket] = bucket_selected_counts.get(bucket, 0) + 1
+                if len(selected) >= max_rows:
+                    return selected
+
+    remaining = [
+        record
+        for bucket_records in buckets.values()
+        for record in bucket_records
+        if record["text_hash"] not in selected_hashes
+    ]
+    remaining.sort(
+        key=lambda record: (
+            source_counts.get(record["source"], 0),
+            stable_v3_record_key(record, seed + 1),
+        )
+    )
+    for record in remaining:
+        add_v3_record_if_allowed(
+            record,
+            selected,
+            selected_hashes,
+            source_counts,
+            source_cap=source_cap,
+            max_rows=max_rows,
+        )
+        if len(selected) >= max_rows:
+            break
+
+    return selected
+
+
+def deduplicate_v3_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduplicated = []
+    seen = set()
+    for record in records:
+        text_hash_value = record.get("text_hash")
+        if not text_hash_value or text_hash_value in seen:
+            continue
+        seen.add(text_hash_value)
+        deduplicated.append(record)
+    return deduplicated
+
+
+def add_v3_record_if_allowed(
+    record: dict[str, Any],
+    selected: list[dict[str, Any]],
+    selected_hashes: set[str],
+    source_counts: dict[str, int],
+    *,
+    source_cap: int,
+    max_rows: int,
+) -> bool:
+    if len(selected) >= max_rows:
+        return False
+    text_hash_value = record["text_hash"]
+    if text_hash_value in selected_hashes:
+        return False
+    source = record["source"]
+    if source_cap and source_counts.get(source, 0) >= source_cap:
+        return False
+    selected.append(record)
+    selected_hashes.add(text_hash_value)
+    source_counts[source] = source_counts.get(source, 0) + 1
+    return True
+
+
+def stable_shuffle_records(
+    records: list[dict[str, Any]],
+    *,
+    seed: int,
+) -> list[dict[str, Any]]:
+    shuffled = list(records)
+    random.Random(seed).shuffle(shuffled)
+    return shuffled
+
+
+def stable_v3_record_key(record: dict[str, Any], seed: int) -> str:
+    return hashlib.sha256(
+        f"{seed}:{record.get('text_hash', '')}:{record.get('source', '')}".encode("utf-8")
+    ).hexdigest()
 
 
 def normalize_text_row(row: str) -> str:

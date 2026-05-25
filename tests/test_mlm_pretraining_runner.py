@@ -1,4 +1,6 @@
 import importlib.util
+import gzip
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -177,6 +179,44 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(args.corpus, "capitalization_domain_mix_v2")
 
+    def test_parse_args_accepts_v3_corpora(self):
+        import sys
+        from unittest.mock import patch
+
+        for corpus in (
+            "capitalization_v3_general",
+            "capitalization_v3_domain_train",
+            "capitalization_v3_mixed_curriculum",
+        ):
+            argv = [
+                "run_mlm_pretraining.py",
+                "--model-kind",
+                "capitalized",
+                "--corpus",
+                corpus,
+            ]
+
+            with patch.object(sys, "argv", argv):
+                args = self.runner.parse_args()
+
+            self.assertEqual(args.corpus, corpus)
+
+    def test_parse_args_accepts_capitalization_freeze_warmup(self):
+        import sys
+        from unittest.mock import patch
+
+        argv = [
+            "run_mlm_pretraining.py",
+            "--model-kind",
+            "capitalized",
+            "--freeze-non-capitalization-parameters",
+        ]
+
+        with patch.object(sys, "argv", argv):
+            args = self.runner.parse_args()
+
+        self.assertTrue(args.freeze_non_capitalization_parameters)
+
     def test_augmented_task_mix_adds_case_variants(self):
         rows = ["tom met nasa in paris", "IBM hired alice"]
 
@@ -221,6 +261,31 @@ class MLMPretainingRunnerTests(unittest.TestCase):
             self.runner.case_signal_score("ordinary lowercase sentence"),
         )
 
+    def test_capitalization_profile_counts_v3_buckets(self):
+        profile = self.runner.capitalization_profile("NASA met iPhone at Stanford")
+
+        self.assertEqual(profile["all_caps_count"], 1)
+        self.assertEqual(profile["mixed_case_count"], 1)
+        self.assertGreaterEqual(profile["first_cap_count"], 1)
+        self.assertEqual(
+            self.runner.classify_v3_bucket(profile),
+            "mixed_case_rich",
+        )
+
+    def test_make_v3_record_adds_manifest_fields(self):
+        record = self.runner.make_v3_record(
+            "NASA met iPhone at Stanford",
+            "unit_source",
+            "train",
+            7,
+        )
+
+        self.assertEqual(record["source"], "unit_source")
+        self.assertEqual(record["source_split"], "train")
+        self.assertEqual(record["source_index"], 7)
+        self.assertEqual(record["selected_bucket"], "mixed_case_rich")
+        self.assertEqual(len(record["text_hash"]), 64)
+
     def test_select_case_rich_rows_deduplicates_and_filters_lowercase(self):
         rows = [
             "ordinary lowercase sentence",
@@ -233,6 +298,66 @@ class MLMPretainingRunnerTests(unittest.TestCase):
 
         self.assertEqual(len(selected), 2)
         self.assertEqual(selected[0], "IBM FDA DNA RNA")
+
+    def test_select_v3_records_balances_buckets_and_source_caps(self):
+        rows = [
+            self.runner.make_v3_record("ordinary lowercase sentence", "a", "train", 0),
+            self.runner.make_v3_record("another ordinary lowercase row", "a", "train", 1),
+            self.runner.make_v3_record("NASA and FDA reviewed DNA", "b", "train", 0),
+            self.runner.make_v3_record("Stanford University Filed Motion", "c", "train", 0),
+            self.runner.make_v3_record("iPhone and eBay changed APIs", "d", "train", 0),
+            self.runner.make_v3_record("NASA and FDA reviewed DNA", "b", "train", 1),
+        ]
+
+        selected = self.runner.select_v3_records(
+            rows,
+            max_rows=4,
+            source_cap=1,
+            bucket_fractions={
+                "ordinary": 0.25,
+                "all_caps_rich": 0.25,
+                "first_cap_rich": 0.25,
+                "mixed_case_rich": 0.25,
+            },
+        )
+
+        self.assertEqual(len(selected), 4)
+        self.assertEqual(len({record["text_hash"] for record in selected}), 4)
+        self.assertLessEqual(
+            max(
+                sum(1 for record in selected if record["source"] == source)
+                for source in {record["source"] for record in selected}
+            ),
+            1,
+        )
+
+    def test_write_and_load_cached_v3_rows(self):
+        import os
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            records = [
+                self.runner.make_v3_record("NASA met iPhone at Stanford", "unit", "train", 0),
+                self.runner.make_v3_record("ordinary lowercase sentence", "unit", "train", 1),
+            ]
+
+            with patch.dict(os.environ, {"CAP_EMB_WORK_ROOT": tmpdir}):
+                self.runner.write_cached_v3_rows(
+                    "capitalization_v3_general",
+                    [records[0]],
+                    [records[1]],
+                )
+                train_rows, eval_rows = self.runner.load_cached_v3_rows(
+                    "capitalization_v3_general",
+                )
+                manifest_path = self.runner.v3_manifest_path()
+
+            self.assertEqual(train_rows, ["NASA met iPhone at Stanford"])
+            self.assertEqual(eval_rows, ["ordinary lowercase sentence"])
+            with gzip.open(manifest_path, "rt", encoding="utf-8") as handle:
+                manifest_rows = [json.loads(line) for line in handle]
+            self.assertEqual(len(manifest_rows), 2)
+            self.assertNotIn("text", manifest_rows[0])
 
     def test_stable_shuffle_rows_is_deterministic(self):
         rows = ["a", "b", "c", "d", "e"]

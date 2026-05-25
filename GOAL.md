@@ -141,22 +141,25 @@ Completed:
 - Added `PAPER_READINESS.md` to lock the defensible paper claim, boundary
   conditions, and next GPU gate.
 
-Active non-GPU work before restarting RunPod:
+Active non-GPU work before restarting GPU training:
 
 1. Run token-level error analysis once the saved prediction JSONL roots are
    mounted from the RunPod network volume.
 2. Keep `paper/draft.md`, `PAPER_READINESS.md`, and `PAPER_EVIDENCE_STATUS.md`
    synchronized after every result or design decision so no work is lost across
    context compaction.
-3. Restart RunPod only when the next step is one of the locked GPU ablations or
-   seed expansions.
+3. Use `PRETRAINING_V3_PLAN.md` as the active design for the next provider.
+4. Build V3 corpus manifests and row caches before renting more GPU time.
 
-Active GPU-pretraining probe:
+Active pretraining redesign:
 
-1. Run `scripts/run_domain_mix_v2_pretraining.sh` to test a larger,
-   domain-targeted, case-rich continued-pretraining corpus.
-2. Use only matched V2 checkpoints against each other:
-   `uncased_from_round2_steps3000_lr2e5`, `cased_from_round2_steps3000_lr2e5`,
-   and `capitalized_from_mixed_case_current_steps3000_lr2e5`.
-3. Run `scripts/run_domain_mix_v2_diagnostics.sh` before deciding whether V2
-   should replace the current paper checkpoint or remain an appendix result.
+1. Treat V2 as a useful diagnostic, not the final pretraining story. It was a
+   matched 3k-step continuation and too short to settle the sequence-task
+   failures.
+2. Build separate V3 corpora for general natural casing, train-split
+   domain-adaptive pretraining, and a mixed curriculum.
+3. Run all headline V3 comparisons as matched triplets:
+   `bert-base-uncased`, `bert-base-cased`, and cap-embed BERT receive the same
+   text/order/steps. The cap model may use its auxiliary capitalization loss
+   because that is part of the architecture.
+4. Select checkpoints by downstream diagnostics, not MLM loss alone.
