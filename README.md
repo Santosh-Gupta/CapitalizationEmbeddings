@@ -52,10 +52,14 @@ tests/
 
 ## Experiment Status
 
-The current evidence ledger is maintained in
+This project is now being wrapped as a technical blog post rather than a
+conference submission. The blog draft is [BLOG_POST.md](BLOG_POST.md), and the
+wrap-up checklist is [WRAP_UP.md](WRAP_UP.md).
+
+The historical evidence ledger is maintained in
 [PAPER_EVIDENCE_STATUS.md](PAPER_EVIDENCE_STATUS.md). It records the current
-best checkpoint family, benchmark roots, completed multi-seed results, negative
-results, and the remaining statistical work needed before paper submission.
+best checkpoint family, benchmark roots, completed multi-seed results, and
+negative results.
 
 GPU and CPU experiment batches are tracked in [RUN_LEDGER.md](RUN_LEDGER.md).
 Update that file before launching a run and after it completes.
