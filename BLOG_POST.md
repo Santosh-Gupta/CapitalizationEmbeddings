@@ -277,6 +277,53 @@ mixed-case forms, or a character-level recaser. For the encoder experiments in
 this repo, that issue is mostly irrelevant because downstream tasks consume
 hidden states rather than decoded text.
 
+### Cased Decoder Variant: Case-Family Coupling
+
+Most practical decoder LLM tokenizers are already cased. In that setting, the
+goal changes. We are no longer trying to save vocabulary slots by deleting
+`Tom` or `TOM` from the tokenizer. Instead, the goal is statistical sharing:
+when the model sees `Tom`, the lowercase token `tom` and all-caps token `TOM`
+should receive some related training signal without losing the ability to
+decode the exact observed token.
+
+The conservative version is to build case families over existing tokenizer
+tokens:
+
+```text
+tom  <->  Tom  <->  TOM
+word <->  Word <->  WORD
+```
+
+This mapping should start narrow: same tokenizer boundary marker, alphabetic
+tokens only, lowercase counterpart present, and only first-letter-capitalized or
+all-caps variants. Mixed-case forms such as `iPhone`, abbreviations such as
+`US`, and lexical ambiguities such as `May` versus `may` should be excluded
+until the basic mechanism works.
+
+Several training-only couplings are possible:
+
+```text
+L = L_exact_token
+  + lambda * L_case_family
+  + mu * L_embedding_family
+```
+
+`L_exact_token` is the normal next-token cross entropy. `L_case_family` gives
+some credit to the target's case family, for example by maximizing the summed
+probability of `{tom, Tom, TOM}` when any one of those is the target.
+`L_embedding_family` softly regularizes the rows so that:
+
+```text
+E_Tom ~= E_tom + C_first
+E_TOM ~= E_tom + C_all
+```
+
+The important part is that these are soft constraints, not hard tying. A decoder
+still needs to learn that `Apple` and `apple` are not always interchangeable.
+The best first experiment for a cased model would therefore leave the tokenizer
+and architecture untouched, then add a small case-family auxiliary loss and an
+embedding-family regularizer during continued pretraining.
+
 ## Limitations
 
 This was an engineering exploration, not a final benchmark paper.
