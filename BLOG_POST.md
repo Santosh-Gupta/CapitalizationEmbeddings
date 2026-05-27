@@ -237,6 +237,46 @@ rotations preserve vector norm, this might be a cleaner way to add case than
 ordinary additive embeddings. This project did not test that idea, but it is the
 most interesting next architecture experiment.
 
+### Decoding Without Expanding The Vocabulary
+
+For encoder classification tasks, the model usually never has to decode text.
+For generation or masked-token reconstruction, decoding matters. The naive
+solution would predict a joint `(token, case)` label, which effectively expands
+the output space by the number of case states. That loses much of the point.
+
+A better output factorization is:
+
+```text
+p(token, case | h) = p(token | h) * p(case | h, token)
+```
+
+In practice this can be implemented as one normal vocabulary head plus a tiny
+case head:
+
+```text
+token_logits = W_vocab h
+case_logits  = W_case h
+```
+
+Then decoding is:
+
+```text
+base_token = argmax token_logits
+case_id    = argmax case_logits
+surface    = apply_case(base_token, case_id)
+```
+
+This costs `V + C` logits, not `V * C` logits. With four case states, the extra
+decode cost is negligible.
+
+There is one hard caveat: a four-class case ID can reconstruct `tom`, `Tom`, and
+`TOM`, but it cannot uniquely reconstruct arbitrary mixed-case strings such as
+`iPhone`, `eBay`, or `McDonald`. For generative models, mixed-case decoding needs
+one extra mechanism: a small case-pattern predictor, a lexicon for common
+mixed-case forms, or a character-level recaser. For the encoder experiments in
+this repo, that issue is mostly irrelevant because downstream tasks consume
+hidden states rather than decoded text.
+
 ## Limitations
 
 This was an engineering exploration, not a final benchmark paper.
