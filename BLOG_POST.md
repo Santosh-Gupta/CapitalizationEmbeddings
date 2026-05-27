@@ -204,6 +204,39 @@ The capitalization channel can improve on its own held-out objective without
 automatically improving downstream tasks. The downstream benchmark is the real
 test.
 
+## Possible Follow-Up: Move Case Into Attention
+
+The implementation in this project adds capitalization embeddings to the input
+embedding stack. That is simple and Hugging Face-friendly, but it may not be the
+only way to represent case. Modern decoder LLMs usually inject position through
+attention, for example with rotary position embeddings, rather than by adding a
+learned position vector to the token embedding. A similar idea could be tried
+for capitalization.
+
+The lowest-risk variant would be a learned attention-logit bias:
+
+```text
+attention_score(i, j) =
+  q_i k_j / sqrt(d)
+  + case_bias[head, case_i, case_j]
+```
+
+This would let each head learn patterns such as "all-caps tokens attend more to
+other all-caps tokens" or "first-cap tokens attend to surrounding lowercase
+context" without modifying the token representation itself.
+
+A more RoPE-like variant would rotate query/key vectors by capitalization state:
+
+```text
+q_i' = R_case(case_i) q_i
+k_j' = R_case(case_j) k_j
+```
+
+Then attention depends on both lexical content and relative case state. Because
+rotations preserve vector norm, this might be a cleaner way to add case than
+ordinary additive embeddings. This project did not test that idea, but it is the
+most interesting next architecture experiment.
+
 ## Limitations
 
 This was an engineering exploration, not a final benchmark paper.
