@@ -24,14 +24,16 @@ The current results are paper-final.
 
 ## Main Artifact
 
-Blog draft:
+Public-facing blog post:
 
 ```text
-BLOG_POST.md
+README.md
 ```
 
-The draft uses existing completed results only. It intentionally does not depend
-on V3 pretraining or additional GPU experiments.
+`BLOG_POST.md` is kept as the source copy, but the README now mirrors the blog
+post so the repository landing page is the writeup. The draft uses existing
+completed results only. It intentionally does not depend on V3 pretraining or
+additional GPU experiments.
 
 ## Supporting Artifacts
 
