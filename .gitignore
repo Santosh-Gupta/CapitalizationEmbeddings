@@ -13,6 +13,7 @@ runs/
 wandb/
 mlruns/
 logs/
+local_backups/
 *.safetensors
 *.bin
 *.pt
