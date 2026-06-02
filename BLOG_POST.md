@@ -167,6 +167,27 @@ The important caveat is that this is not a universal best-of-both-worlds model.
 TweetEval Emoji favored cased BERT strongly in our diagnostics, and the
 capitalization model stayed much closer to uncased. TREC Fine was also a miss.
 
+Additional completed diagnostics that are not all promoted into the headline
+table:
+
+| Benchmark | Metric | Uncased | Cased | Capitalized | Read |
+| --- | --- | ---: | ---: | ---: | --- |
+| OntoNotes v5 NER | entity F1 | 0.872913 +/- 0.001348, n=5 | 0.888170 +/- 0.003293, n=5 | 0.887593 +/- 0.001624, n=5 | cap ~= cased > uncased |
+| PTB POS | accuracy | 0.973149 +/- 0.000386, n=5 | 0.977100 +/- 0.000569, n=5 | 0.977179 +/- 0.000199, n=5 | cap ~= cased > uncased |
+| TweetEval Emoji | accuracy | 0.369372 +/- 0.003103, n=5 | 0.453884 +/- 0.002073, n=5 | 0.369396 +/- 0.002440, n=5 | cased dominates; cap ~= uncased |
+| TREC Fine | accuracy | 0.829600 +/- 0.008877, n=5 | 0.836000 +/- 0.005099, n=5 | 0.820400 +/- 0.007925, n=5 | cap underperforms both |
+| SciERC relations | accuracy | 0.861602 +/- 0.010174, n=5 | 0.843326 +/- 0.010832, n=5 | 0.844353 +/- 0.010585, n=5 | uncased dominates |
+| Combined scientific relations | accuracy | 0.632506 +/- 0.010860, n=5 | 0.624680 +/- 0.006076, n=5 | 0.625282 +/- 0.004729, n=5 | uncased dominates |
+| SemEval18 Task 7 validation | accuracy | 0.513821 +/- 0.049252, n=5 | 0.585366 +/- 0.043782, n=5 | 0.530081 +/- 0.040813, n=5 | cased dominates; high variance |
+| SciEntsBank 3-way UQ | macro-F1 | 0.424502 +/- 0.027775, n=5 | 0.399589 +/- 0.027142, n=5 | 0.398351 +/- 0.011996, n=5 | uncased dominates |
+| SciEntsBank 3-way UD | macro-F1 | 0.447222 +/- 0.043735, n=5 | 0.516709 +/- 0.021029, n=5 | 0.410593 +/- 0.008775, n=5 | cased dominates |
+
+These diagnostics matter because they keep the claim honest. The method looks
+strongest on token/entity tasks where capitalization behaves like a reusable
+feature. It does not recover every cased-model advantage, and it does not
+replace the lexical/statistical benefits of uncased BERT on scientific or
+short-answer grading tasks.
+
 ## What I Learned
 
 ### 1. The factorization works best when case is a reusable feature
